@@ -4,19 +4,25 @@ import torch.nn.functional as F
 import numpy as np
 
 class ResNet_block3D(nn.Module):
-    def __init__(self, in_channels, out_channels, dropout_rate=0.5):
+    def __init__(self, in_channels, out_channels, dropout_rate=0.5,
+                 kernel_size = 3, stride = 1, padding = 1):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.dropout_rate = dropout_rate
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
 
-        self.conv1 = nn.Conv3d(in_channels, out_channels, kernel_size=3, 
-                               stride=1, padding=1)
+        self.conv1 = nn.Conv3d(self.in_channels, self.out_channels, 
+                               self.kernel_size, self.stride, 
+                               self.padding)
         self.dropout1 = nn.Dropout3d(dropout_rate)
         self.bn1 = nn.BatchNorm3d(out_channels)
         self.relu1 = nn.ReLU()
-        self.conv2 = nn.Conv3d(out_channels, out_channels, kernel_size=3, 
-                               stride=1, padding=1)
+        self.conv2 = nn.Conv3d(self.in_channels, self.out_channels, 
+                               self.kernel_size, self.stride, 
+                               self.padding)
         self.dropout2 = nn.Dropout3d(dropout_rate)
         self.bn2 = nn.BatchNorm3d(out_channels)
         self.relu2 = nn.ReLU()
@@ -65,37 +71,56 @@ class Attention3D(nn.Module):
 
         return x
     
-    class UpSample3D(nn.Module):
-        def __init__(self, in_channels, out_channels):
-            super().__init__()
-            self.in_channels = in_channels
-            self.out_channels = out_channels
+class UpSample3D(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size = 3, 
+                    stride=2, padding=0):
+        super().__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
 
-            self.conv = nn.Conv3d(in_channels, out_channels, kernel_size=3, 
-                                  stride=1, padding=1) 
-            # Transposed Conv checkerboard artifacts: https://distill.pub/2016/deconv-checkerboard/
-            # self.bn = nn.BatchNorm3d(out_channels)
+        self.conv = nn.Conv3d(in_channels=self.in_channels, 
+                                out_channels=self.out_channels, 
+                                kernel_size=self.kernel_size, 
+                                stride=self.stride, 
+                                padding=self.padding)
+        # Transposed Conv checkerboard artifacts: 
+        # https://distill.pub/2016/deconv-checkerboard/
 
-        def forward(self, x):
-            x = F.interpolate(x, scale_factor=2, mode='trilinear', 
-                              align_corners=True)
-            x = self.conv(x)
-            # x = self.bn(x)
-            return x
+        # self.bn = nn.BatchNorm3d(out_channels)
+
+    def forward(self, x):
+        x = F.interpolate(x, scale_factor=2, mode='trilinear', 
+                            align_corners=True)
+        x = self.conv(x)
+        # x = self.bn(x)
+        return x
+    
+
+class DownSample3D(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size = 3, 
+                    stride=2, padding=0):
+        super().__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+
+        self.conv = nn.Conv3d(in_channels=self.in_channels, 
+                                out_channels=self.out_channels, 
+                                kernel_size=self.kernel_size, 
+                                stride=self.stride, 
+                                padding=self.padding)
         
+        # self.bn = nn.BatchNorm3d(out_channels)
 
-    class DownSample3D(nn.Module):
-        def __init__(self, in_channels, out_channels):
-            super().__init__()
-            self.in_channels = in_channels
-            self.out_channels = out_channels
-
-            self.conv = nn.Conv3d(in_channels, out_channels, kernel_size=3, 
-                                  stride=2, padding=1)
-            # self.bn = nn.BatchNorm3d(out_channels)
-
-        def forward(self, x):
-            x = self.conv(x)
-            # x = self.bn(x)
-            return x
-        
+    def forward(self, x):
+        x = self.conv(x)
+        # x = self.bn(x)
+        return x
+    
+def swish(x):
+    return x * torch.sigmoid(x)
