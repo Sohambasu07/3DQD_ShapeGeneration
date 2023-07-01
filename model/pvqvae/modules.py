@@ -124,3 +124,10 @@ class DownSample3D(nn.Module):
     
 def swish(x):
     return x * torch.sigmoid(x)
+
+def VQ(enc_embed : torch.Tensor, codebook : torch.Tensor):
+    #encoder embed: batch_size x block_count x Nz
+    #codebook: KxNz
+    similarity = enc_embed @ codebook.T
+    codebook_idxs = torch.argmax(similarity, dim=-1)
+    return codebook_idxs

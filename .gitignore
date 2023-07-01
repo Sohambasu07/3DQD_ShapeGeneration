@@ -1,0 +1,4 @@
+ShapeNetCore.v2/
+dataset/
+__pycache__/
+.DS_Store
