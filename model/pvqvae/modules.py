@@ -3,9 +3,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
+
 class ResNet_block3D(nn.Module):
     def __init__(self, in_channels, out_channels, dropout_rate=0.5,
-                 kernel_size = 3, stride = 1, padding = 1):
+                 kernel_size=3, stride=1, padding=1):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -14,14 +15,14 @@ class ResNet_block3D(nn.Module):
         self.stride = stride
         self.padding = padding
 
-        self.conv1 = nn.Conv3d(self.in_channels, self.out_channels, 
-                               self.kernel_size, self.stride, 
+        self.conv1 = nn.Conv3d(self.in_channels, self.out_channels,
+                               self.kernel_size, self.stride,
                                self.padding)
         self.dropout1 = nn.Dropout3d(dropout_rate)
         self.bn1 = nn.BatchNorm3d(out_channels)
         self.relu1 = nn.ReLU()
-        self.conv2 = nn.Conv3d(self.in_channels, self.out_channels, 
-                               self.kernel_size, self.stride, 
+        self.conv2 = nn.Conv3d(self.in_channels, self.out_channels,
+                               self.kernel_size, self.stride,
                                self.padding)
         self.dropout2 = nn.Dropout3d(dropout_rate)
         self.bn2 = nn.BatchNorm3d(out_channels)
@@ -39,19 +40,20 @@ class ResNet_block3D(nn.Module):
         x = self.relu2(x)
         x = x + input
         return x
-    
+
+
 class Attention3D(nn.Module):
     def __init__(self, in_channels):
         super().__init__()
         self.in_channels = in_channels
 
-        self.query = nn.Conv3d(in_channels, in_channels, kernel_size=1, 
+        self.query = nn.Conv3d(in_channels, in_channels, kernel_size=1,
                                stride=1, padding=0)
-        self.key = nn.Conv3d(in_channels, in_channels, kernel_size=1, 
+        self.key = nn.Conv3d(in_channels, in_channels, kernel_size=1,
                              stride=1, padding=0)
-        self.value = nn.Conv3d(in_channels, in_channels, kernel_size=1, 
+        self.value = nn.Conv3d(in_channels, in_channels, kernel_size=1,
                                stride=1, padding=0)
-        self.projection = nn.Conv3d(in_channels, in_channels, kernel_size=1, 
+        self.projection = nn.Conv3d(in_channels, in_channels, kernel_size=1,
                                     stride=1, padding=0)
 
     def forward(self, x):
@@ -63,17 +65,18 @@ class Attention3D(nn.Module):
         k = k.view(B, C, -1)
         v = v.view(B, C, -1)
         attn_wts = torch.bmm(q.permute(0, 2, 1), k)
-        attention = torch.bmm(v, F.softmax(attn_wts*(C**-0.5), 
+        attention = torch.bmm(v, F.softmax(attn_wts * (C ** -0.5),
                                            dim=2).permute(0, 2, 1))
         attention = attention.view(B, C, D, H, W)
         attention = self.projection(attention)
         x = x + attention
 
         return x
-    
+
+
 class UpSample3D(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size = 3, 
-                    stride=2, padding=0):
+    def __init__(self, in_channels, out_channels, kernel_size=3,
+                 stride=2, padding=0):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -81,27 +84,27 @@ class UpSample3D(nn.Module):
         self.stride = stride
         self.padding = padding
 
-        self.conv = nn.Conv3d(in_channels=self.in_channels, 
-                                out_channels=self.out_channels, 
-                                kernel_size=self.kernel_size, 
-                                stride=self.stride, 
-                                padding=self.padding)
+        self.conv = nn.Conv3d(in_channels=self.in_channels,
+                              out_channels=self.out_channels,
+                              kernel_size=self.kernel_size,
+                              stride=self.stride,
+                              padding=self.padding)
         # Transposed Conv checkerboard artifacts: 
         # https://distill.pub/2016/deconv-checkerboard/
 
         # self.bn = nn.BatchNorm3d(out_channels)
 
     def forward(self, x):
-        x = F.interpolate(x, scale_factor=2, mode='trilinear', 
-                            align_corners=True)
+        x = F.interpolate(x, scale_factor=2, mode='trilinear',
+                          align_corners=True)
         x = self.conv(x)
         # x = self.bn(x)
         return x
-    
+
 
 class DownSample3D(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size = 3, 
-                    stride=2, padding=0):
+    def __init__(self, in_channels, out_channels, kernel_size=3,
+                 stride=2, padding=0):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -109,19 +112,20 @@ class DownSample3D(nn.Module):
         self.stride = stride
         self.padding = padding
 
-        self.conv = nn.Conv3d(in_channels=self.in_channels, 
-                                out_channels=self.out_channels, 
-                                kernel_size=self.kernel_size, 
-                                stride=self.stride, 
-                                padding=self.padding)
-        
+        self.conv = nn.Conv3d(in_channels=self.in_channels,
+                              out_channels=self.out_channels,
+                              kernel_size=self.kernel_size,
+                              stride=self.stride,
+                              padding=self.padding)
+
         # self.bn = nn.BatchNorm3d(out_channels)
 
     def forward(self, x):
         x = self.conv(x)
         # x = self.bn(x)
         return x
-    
+
+
 def swish(x):
     return x * torch.sigmoid(x)
 
