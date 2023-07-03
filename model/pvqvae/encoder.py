@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from model.pvqvae.modules import ResNet_block3D, Attention3D, UpSample3D, DownSample3D
+from model.pvqvae.modules import ResNet_block3D, Attention3D, UpSample3D, DownSample3D, groupNorm
 
 class Encoder3D(nn.Module):
     def __init__(self, in_channels, conv1_outchannels=64):
