@@ -124,10 +124,9 @@ class DownSample3D(nn.Module):
         x = self.conv(x)
         # x = self.bn(x)
         return x
-
-
-def swish(x):
-    return x * torch.sigmoid(x)
+    
+def groupNorm(x, num_channels, num_groups=32):
+    return nn.GroupNorm(num_groups = num_groups, num_channels = num_channels)
 
 def VQ(enc_embed : torch.Tensor, codebook : torch.Tensor):
     #encoder embed: batch_size x block_count x Nz
