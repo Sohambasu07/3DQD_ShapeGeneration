@@ -5,7 +5,7 @@ import numpy as np
 from model.pvqvae.modules import ResNet_block3D, Attention3D, UpSample3D, DownSample3D, groupNorm
 
 class Encoder3D(nn.Module):
-    def __init__(self, in_channels, conv1_outchannels=64):
+    def __init__(self, in_channels=1, conv1_outchannels=64):
         super().__init__()
         self.in_channels = in_channels
         self.conv1_outchannels = conv1_outchannels
