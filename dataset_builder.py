@@ -12,7 +12,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_path", type=str, help="root folder of the 3D models", default='../ShapeNetCore.v2/')
     parser.add_argument("--save_path", type=str, help="save directory for tsdfs", default='dataset')
     parser.add_argument("--grid_size", type=int, help="one dimension of the grid", default=64)
-    parser.add_argument("--threshold", type=float, help="tsdf threshold", default=0.8)
+    parser.add_argument("--threshold", type=float, help="tsdf threshold", default=0.2)
     
     args = parser.parse_args()
 
