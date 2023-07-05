@@ -6,7 +6,7 @@ import numpy as np
 
 class ResNet_block3D(nn.Module):
     def __init__(self, in_channels, out_channels, dropout_rate=0.5,
-                 kernel_size=3, stride=1, padding=1):
+                 kernel_size=3, stride=1, padding=1, use_conv_shortcut=True):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -21,16 +21,34 @@ class ResNet_block3D(nn.Module):
         self.dropout1 = nn.Dropout3d(dropout_rate)
         self.bn1 = nn.BatchNorm3d(out_channels)
         self.relu1 = nn.ReLU()
-        self.conv2 = nn.Conv3d(self.in_channels, self.out_channels,
+        self.conv2 = nn.Conv3d(self.out_channels, self.out_channels,
                                self.kernel_size, self.stride,
                                self.padding)
         self.dropout2 = nn.Dropout3d(dropout_rate)
         self.bn2 = nn.BatchNorm3d(out_channels)
         self.relu2 = nn.ReLU()
 
+        self.use_conv_shortcut = use_conv_shortcut
+
+        if self.in_channels != self.out_channels:
+            if self.use_conv_shortcut:
+                self.conv_shortcut = torch.nn.Conv3d(in_channels,
+                                                     out_channels,
+                                                     kernel_size=3,
+                                                     stride=1,
+                                                     padding=1)
+            else:
+                self.nin_shortcut = torch.nn.Conv3d(in_channels,
+                                                    out_channels,
+                                                    kernel_size=1,
+                                                    stride=1,
+                                                    padding=0)
+
     def forward(self, x):
-        input = x
+        inp = x
+        print(f'1. {x.shape=}')
         x = self.conv1(x)
+        # print(f'2. {x.shape=}')
         x = self.dropout1(x)
         x = self.bn1(x)
         x = self.relu1(x)
@@ -38,7 +56,17 @@ class ResNet_block3D(nn.Module):
         x = self.dropout2(x)
         x = self.bn2(x)
         x = self.relu2(x)
-        x = x + input
+
+        if self.in_channels != self.out_channels:
+            if self.use_conv_shortcut:
+                inp = self.conv_shortcut(inp)
+            else:
+                inp = self.nin_shortcut(inp)
+
+        x = x + inp
+
+        print(f'Resnet block out: {x.shape=}')
+        print('-------')
         return x
 
 
@@ -122,6 +150,7 @@ class DownSample3D(nn.Module):
 
     def forward(self, x):
         x = self.conv(x)
+        print(f'Downsample Output: {x.shape}')
         # x = self.bn(x)
         return x
     
