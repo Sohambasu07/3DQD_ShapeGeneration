@@ -126,22 +126,30 @@ def Normalize(in_channels):
 
 class Decoder3D(nn.Module):
     def __init__(self):
+        super().__init__()
+
+        ch = 64
+        ch_mult = [1,2,2,4]
+        self.num_resolutions = len(ch_mult)
+        block_in = ch * ch_mult[self.num_resolutions - 1]  # 64 * 4
+
         self.conv_in = torch.nn.Conv3d(in_channels=256, out_channels=256, kernel_size=3, stride=1, padding=1)
 
         self.res1 = ResNet_block3D(256, 256)
         self.attn1 = Attention3D(256)
         self.res2 = ResNet_block3D(256, 256)
-        self.up1 = UpSample3D(256, 256, kernel_size=3, stride=2, padding=0)
+        # self.up1 = UpSample3D(256, 256, kernel_size=3, stride=2, padding=0)
+        self.up1 = UpSample3D(256, 256, kernel_size=3)
 
         self.res3 = ResNet_block3D(256, 128)
         self.attn2 = Attention3D(128)
-        self.up2 = UpSample3D(128, 128, kernel_size=3, stride=2, padding=0)
+        self.up2 = UpSample3D(128, 128, kernel_size=3)
 
         self.res4 = ResNet_block3D(128, 64)
-        self.up2 = UpSample3D(64, 64, kernel_size=3, stride=2, padding=0)
+        self.up3 = UpSample3D(64, 64, kernel_size=3)
         self.res5 = ResNet_block3D(64, 64)
         self.res6 = ResNet_block3D(64, 64)
-        self.norm = Normalize
+        self.norm = Normalize(64)
         self.swish = nonlinearity
 
         self.conv_out = torch.nn.Conv3d(in_channels=64, out_channels=1, kernel_size=3, stride=1, padding=1)
@@ -156,12 +164,13 @@ class Decoder3D(nn.Module):
 
         x = self.res3(x)
         x = self.attn2(x)
-        x = self.up1(x)
-        x = self.res4(x)
         x = self.up2(x)
+        x = self.res4(x)
+        x = self.up3(x)
 
         x = self.res5(x)
         x = self.res6(x)
+
         x = self.norm(x)
         x = self.swish(x)
 

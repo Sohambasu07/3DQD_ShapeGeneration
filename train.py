@@ -6,12 +6,13 @@ from torch.utils.data import DataLoader
 from tsdf_dataset import ShapeNet
 from model.pvqvae.encoder import Encoder3D
 from model.pvqvae.decoder import Decoder3D
+from model.pvqvae.vector_quantizer import VectorQuantizer
 
 
 shapenet_dataset = ShapeNet(r'./dataset')
 data_loader = DataLoader(shapenet_dataset, batch_size=2, shuffle=True)
 tsdf_sample = next(iter(data_loader))
-print(tsdf_sample[0].shape)
+# print(tsdf_sample[0].shape)
 model_path = tsdf_sample[1][0]
 tsdf = tsdf_sample[0][0]
 
@@ -23,8 +24,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Create the models
 encoder = Encoder3D().to(device)
-# decoder = Decoder3D().to(device)
-#
+quantizer = VectorQuantizer(512, 256).to(device)
+decoder = Decoder3D().to(device)
+
 # # Define the loss function
 # criterion = nn.MSELoss()
 #
@@ -32,7 +34,15 @@ encoder = Encoder3D().to(device)
 # # optimizer = optim.Adam(model.parameters(), lr=0.001)
 #
 
-print(encoder(tsdf))
+encoded = encoder(tsdf)
+print(f'{encoded.shape=}')
+
+quantized, loss = quantizer(encoded)
+print(f'{quantized.shape=}')
+
+print(f'{decoder(quantized).shape=}')
+
+
 
 # # Training loop
 # def train(model, dataloader, criterion, optimizer, device):
