@@ -9,19 +9,23 @@ import argparse
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--path", type=str, help="root folder of the 3D models", default='../ShapeNetCore.v2/')
+    parser.add_argument("--model_path", type=str, help="root folder of the 3D models", default='../ShapeNetCore.v2/')
+    parser.add_argument("--save_path", type=str, help="save directory for tsdfs", default='dataset')
+    parser.add_argument("--grid_size", type=int, help="one dimension of the grid", default=64)
+    parser.add_argument("--threshold", type=float, help="tsdf threshold", default=0.2)
+    
     args = parser.parse_args()
 
-    root_folder = args.path
-    save_root_folder = 'dataset'
+    root_folder = args.model_path
+    save_root_folder = args.save_path
     if not os.path.exists(save_root_folder):
         os.mkdir(save_root_folder)
 
     class_ids = {'plane': '02691156', 'chair': '03001627', 'table': '04379243'}
-    discarded_samples = ['de45798ef57fe2d131b4f9e586a6d334']
-    num_points = 16*16*16
-    # num_points = 512
-    threshold = 0.8
+    # class_ids = {'chair': '03001627', 'table': '04379243'}
+    discarded_samples = ['de45798ef57fe2d131b4f9e586a6d334', '52e27aecdd55c1bf5b03388497f76a9e', 'a5d68126acbd43395e9e2656aff7dd5b', '5af850643d64c2621b17743c18fb63dc']
+    num_points = args.grid_size ** 3
+    threshold = args.threshold
     gen = np.linspace(-1, 1, math.ceil(num_points**(1/3)))
     points3D = np.array([np.array([x, y, z]) for x in gen for y in gen for z in gen])
 
@@ -38,12 +42,14 @@ if __name__ == "__main__":
             os.mkdir(class_save_folder)
         cls_path = os.path.join(root_folder, class_ids[cls_name])
         for sample_id in os.listdir(cls_path):
-
+            
+            #discards some models which give error
             sample_path = os.path.join(cls_path, sample_id + '/models/model_normalized.obj')
             if not os.path.isfile(sample_path) or sample_id in discarded_samples:
                 print(f"Invalid file: {sample_path}")
                 continue
         
+            #if this file already exist in the dataset skip it
             tsdf_save_path = os.path.join(class_save_folder, f'{cls_name}_{tsdf_no}.pkl')
             tsdf_no += 1
             if os.path.exists(tsdf_save_path):

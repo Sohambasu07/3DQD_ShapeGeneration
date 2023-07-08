@@ -22,7 +22,7 @@ class VectorQuantizer(nn.Module):
         # Don't understand this in the paper implementation. Is this the correct way?
 
         # Get all embeddings
-        indices = torch.arange(self.n_embed)
+        indices = torch.arange(self.n_embed).to('cuda')
         embeddings = self.embedding(indices)
 
         # Calculate dot product similarity between z and embeddings
