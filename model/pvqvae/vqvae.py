@@ -13,9 +13,9 @@ class VQVAE(nn.Module):
         self.decoder = Decoder3D()
         self.vq = VectorQuantizer(n_embed=num_embeddings, e_dim=embed_dim)
 
-    def forward(self, x):
-        x = torch.reshape(x, (1, 1, *x.shape))
-        patched_tsdf = shape2patch(x)
+    def forward(self, patched_tsdf):
+        # x = torch.reshape(x, (1, 1, *x.shape))
+        # patched_tsdf = shape2patch(x)
         encoded = self.encoder(patched_tsdf)
         z_q, vq_loss = self.vq(encoded)
         x_head = self.decoder(z_q)
