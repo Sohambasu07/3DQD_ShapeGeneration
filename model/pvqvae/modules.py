@@ -46,9 +46,7 @@ class ResNet_block3D(nn.Module):
 
     def forward(self, x):
         inp = x
-        print(f'1. {x.shape=}')
         x = self.conv1(x)
-        # print(f'2. {x.shape=}')
         x = self.dropout1(x)
         x = self.bn1(x)
         x = self.relu1(x)
@@ -65,8 +63,6 @@ class ResNet_block3D(nn.Module):
 
         x = x + inp
 
-        print(f'Resnet block out: {x.shape=}')
-        print('-------')
         return x
 
 
@@ -103,14 +99,13 @@ class Attention3D(nn.Module):
 
 
 class UpSample3D(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3,
-                 stride=2, padding=0):
+    def __init__(self, in_channels, out_channels, kernel_size=3):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = kernel_size
-        self.stride = stride
-        self.padding = padding
+        self.stride = 1
+        self.padding = 1
 
         self.conv = nn.Conv3d(in_channels=self.in_channels,
                               out_channels=self.out_channels,
@@ -123,8 +118,9 @@ class UpSample3D(nn.Module):
         # self.bn = nn.BatchNorm3d(out_channels)
 
     def forward(self, x):
-        x = F.interpolate(x, scale_factor=2, mode='trilinear',
-                          align_corners=True)
+        # x = F.interpolate(x, scale_factor=2, mode='trilinear',
+        #                   align_corners=True)
+        x = F.interpolate(x, scale_factor=2, mode='nearest')
         x = self.conv(x)
         # x = self.bn(x)
         return x
@@ -150,7 +146,6 @@ class DownSample3D(nn.Module):
 
     def forward(self, x):
         x = self.conv(x)
-        print(f'Downsample Output: {x.shape}')
         # x = self.bn(x)
         return x
     

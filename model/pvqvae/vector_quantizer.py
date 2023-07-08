@@ -1,8 +1,9 @@
 import torch
 import torch.nn as nn
 
+
 class VectorQuantizer(nn.Module):
-    def __init__(self, n_embed, e_dim, beta=0.25):
+    def __init__(self, n_embed=512, e_dim=256, beta=0.25):
         super().__init__()
         self.n_embed = n_embed
         self.e_dim = e_dim
