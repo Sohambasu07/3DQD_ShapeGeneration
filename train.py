@@ -9,13 +9,18 @@ from model.pvqvae.decoder import Decoder3D
 from model.pvqvae.vqvae import VQVAE
 from utils import shape2patch
 from torch.utils.tensorboard import SummaryWriter
+import numpy as np
 
 # Training loop
 def train(model, dataloader, criterion, optimizer, num_epoch=5,  device='cuda'):
     writer = SummaryWriter()
 
     model.train()  # Set the model to train mode
-    for epeoch in range(num_epoch):
+    for epoch in range(num_epoch):
+        print(f'Epoch {epoch} -------------------------------------')
+        avr_tot_loss_buffer = []
+        avr_recon_loss_buffer = []
+        avr_vq_loss_buffer = []
         for batch_idx, tsdf_sample in enumerate(dataloader):
             model_path = tsdf_sample[1][0]
             tsdf = tsdf_sample[0][0]
@@ -32,12 +37,18 @@ def train(model, dataloader, criterion, optimizer, num_epoch=5,  device='cuda'):
             total_loss.backward()  # Backpropagation
             optimizer.step()  # Update the weights
 
+            avr_tot_loss_buffer.append(total_loss.item())
+            avr_recon_loss_buffer.append(recon_loss.item())
+            avr_vq_loss_buffer.append(vq_loss.item())
             if batch_idx % 50 == 0:
-                iter_no = epeoch * len(data_loader) + batch_idx
-                print(f"Batch {iter_no}/{len(dataloader)} Total Loss: {total_loss.item()} Recon Loss: {recon_loss.item()}, Vq Loss: {vq_loss.item()}")
-                writer.add_scalar('Total loss/Train', total_loss.item(), iter_no)
-                writer.add_scalar('Recon loss/Train', recon_loss.item(), iter_no)
-                writer.add_scalar('VQ loss/Train', vq_loss.item(), iter_no)
+                iter_no = epoch * len(data_loader) + batch_idx
+                avr_tot_loss = np.mean(avr_tot_loss_buffer)
+                avr_recon_loss = np.mean(avr_recon_loss_buffer)
+                avr_vq_loss = np.mean(avr_vq_loss_buffer)
+                print(f"Epoch {epoch}/{num_epoch} - Batch {batch_idx}/{len(dataloader)} Total Loss: {avr_tot_loss} Recon Loss: {avr_recon_loss}, Vq Loss: {avr_vq_loss}")
+                writer.add_scalar('Total loss/Train', avr_tot_loss, iter_no)
+                writer.add_scalar('Recon loss/Train', avr_recon_loss, iter_no)
+                writer.add_scalar('VQ loss/Train', avr_vq_loss, iter_no)
     writer.close()
 
 if __name__ == '__main__':
