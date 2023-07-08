@@ -1,8 +1,9 @@
 import torch
 import torch.nn as nn
 
-class VectorQuantizer(nn.module):
+class VectorQuantizer(nn.Module):
     def __init__(self, n_embed, e_dim, beta=0.25):
+        super().__init__()
         self.n_embed = n_embed
         self.e_dim = e_dim
         self.beta = beta
@@ -20,7 +21,7 @@ class VectorQuantizer(nn.module):
         # Don't understand this in the paper implementation. Is this the correct way?
 
         # Get all embeddings
-        indices = torch.arange(self.n_embed)
+        indices = torch.arange(self.n_embed).to('cuda')
         embeddings = self.embedding(indices)
 
         # Calculate dot product similarity between z and embeddings

@@ -6,6 +6,9 @@ import matplotlib.colors as colors
 import matplotlib.cm as cmx
 import math
 import open3d as o3d
+from mesh_to_sdf import mesh_to_voxels
+import torch
+
 
 def createCmap(sequence, cmap='viridis'):
     cmap = cmx.get_cmap(cmap)
@@ -34,7 +37,23 @@ def truncated_sdf(sdf, threshold):
     # return sdf
     return np.clip(sdf, -threshold, threshold)
 
-def obj_to_tsdf(obj_path, threshold, points3D, max_triangle_count =5000):
+# def trimesh_obj_to_tsdf(obj_path, threshold, points3D, max_triangle_count =5000):
+#     scene = trimesh.load_mesh(obj_path)
+#     if type(scene) == trimesh.scene.scene.Scene:
+#         meshes = scene.dump(concatenate=True)
+#     else:
+#         meshes = scene
+#     merged_mesh = trimesh.util.concatenate(meshes)
+
+#     print(len(merged_mesh.triangles))
+#     if len(merged_mesh.triangles) > max_triangle_count:
+#         merged_mesh = decimate_mesh(obj_path, max_triangle_count)
+
+#     sdf = prox.signed_distance(merged_mesh, points3D)
+#     tsdf = truncated_sdf(sdf, threshold)
+#     return tsdf
+
+def obj_to_tsdf(obj_path, threshold, patch_size=64, max_triangle_count =5000):
     scene = trimesh.load_mesh(obj_path)
     if type(scene) == trimesh.scene.scene.Scene:
         meshes = scene.dump(concatenate=True)
@@ -42,11 +61,11 @@ def obj_to_tsdf(obj_path, threshold, points3D, max_triangle_count =5000):
         meshes = scene
     merged_mesh = trimesh.util.concatenate(meshes)
 
-    print(len(merged_mesh.triangles))
     if len(merged_mesh.triangles) > max_triangle_count:
         merged_mesh = decimate_mesh(obj_path, max_triangle_count)
 
-    sdf = prox.signed_distance(merged_mesh, points3D)
+    # sdf = prox.signed_distance(merged_mesh, points3D)
+    sdf = mesh_to_voxels(merged_mesh, patch_size, pad=False)
     tsdf = truncated_sdf(sdf, threshold)
     return tsdf
 
@@ -62,3 +81,25 @@ def decimate_mesh(path, target_triangles):
     triangles = reduced_mesh.triangles
     reduced_trimesh = trimesh.Trimesh(vertices, triangles)
     return reduced_trimesh
+
+def shape2patch(x, patch_size=8, stride=8):
+        B, C, D, H, W = x.shape
+        x = x.unfold(2, patch_size, stride).unfold(3, patch_size, stride).unfold(4, patch_size, stride)
+        x = x.reshape(B, C, patch_size**3, patch_size, patch_size, patch_size)
+        x = (x.permute(0, 2, 1, 3, 4, 5)).view(B*patch_size**3, C, patch_size, patch_size, patch_size)
+        return x
+    
+def patch2shape(x_head, patch_size=8, output_size=64):
+    #x_head shape (512, 1, 8, 8, 8)
+    x_head = x_head[:, 0]
+    print(x_head.shape)
+    # fold = torch.nn.Fold(output_size=(output_size, output_size, output_size), kernel_size=(patch_size,patch_size,patch_size))/
+    folded_x_head = torch.split(x_head, dim=0, split_size_or_sections=8)
+    # folded_x_head = fold(x_head)
+    return folded_x_head
+
+
+if __name__ == '__main__':
+    test_x = torch.zeros((512, 1, 8, 8, 8))
+    folded_x = patch2shape(test_x)
+    print(len(folded_x))

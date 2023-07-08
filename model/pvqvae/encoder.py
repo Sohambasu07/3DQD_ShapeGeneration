@@ -35,7 +35,7 @@ class Encoder3D(nn.Module):
 
     def forward(self, x):
         x = x.float()
-        print(f'{x.shape=}')
+        # print(f'{x.shape=}')
         x = self.conv1(x)
         i = 1
         for module in self.layers:
@@ -44,5 +44,5 @@ class Encoder3D(nn.Module):
             i += 1
         x = self.nonlinearity(x)
         x = self.conv_out(x)
-        print(x.shape)
+        # print(x.shape)
         return x
