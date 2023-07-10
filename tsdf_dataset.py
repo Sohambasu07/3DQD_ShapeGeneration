@@ -4,10 +4,16 @@ import os
 import json
 import skimage
 
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, random_split
+from utils import display_tsdf
 
 class ShapeNet(Dataset):
-    def __init__(self, dataset_dir):
+    def __init__(self, dataset_dir, split = {'train': True, 'val': True, 'test': True}, 
+                                    split_ratio = {'train': 0.8, 'val': 0.1, 'test': 0.1}, 
+                                    ):
+        
+        self.split = split
+        self.split_ratio = split_ratio
 
         with open(os.path.join(dataset_dir, 'dataset_info.json')) as fp:
             meta_data = json.load(fp)
@@ -34,6 +40,12 @@ class ShapeNet(Dataset):
     def __len__(self):
         return len(self.paths)
     
+    def split_dataset(self):
+        split_dataset = random_split(self, [int(len(self)*self.split_ratio['train']), 
+                                            int(len(self)*self.split_ratio['val']), 
+                                            int(len(self)*self.split_ratio['test'])])
+        return split_dataset[0], split_dataset[1], split_dataset[2]
+    
 
 
 if __name__ == '__main__':
@@ -52,10 +64,7 @@ if __name__ == '__main__':
     print(model_path)
     print(tsdf.shape)
     
-
-    tsdf = tsdf.numpy()
-    vertices, faces, normals, _ = skimage.measure.marching_cubes(tsdf, level=0)
-    mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_normals=normals)
-    mesh.show()
+    display_tsdf(tsdf)
+    
 
 
