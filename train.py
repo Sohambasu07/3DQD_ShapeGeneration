@@ -10,10 +10,27 @@ from model.pvqvae.vqvae import VQVAE
 from utils import shape2patch
 from torch.utils.tensorboard import SummaryWriter
 import numpy as np
+import wandb
 
 # Training loop
-def train(model, dataloader, criterion, optimizer, num_epoch=5,  device='cuda'):
+def train(model, dataloader, criterion, learning_rate, optimizer, num_epoch=5,  device='cuda'):
     writer = SummaryWriter()
+
+    wandb.login()
+
+    wandb.init(
+        # set the wandb project where this run will be logged
+        project="3dqd-pvqvae",
+        
+        # track hyperparameters and run metadata
+        config={
+        "learning_rate": learning_rate,
+        "architecture": "PVQVAE",
+        "dataset": "ShapeNetv2",
+        "optimizer": optimizer.__class__.__name__,
+        "epochs": num_epoch,
+        }
+    )
 
     model.train()  # Set the model to train mode
     for epoch in range(num_epoch):
@@ -49,6 +66,7 @@ def train(model, dataloader, criterion, optimizer, num_epoch=5,  device='cuda'):
                 writer.add_scalar('Total loss/Train', avr_tot_loss, iter_no)
                 writer.add_scalar('Recon loss/Train', avr_recon_loss, iter_no)
                 writer.add_scalar('VQ loss/Train', avr_vq_loss, iter_no)
+        wandb.log({"Total loss/Train": avr_tot_loss, "Recon loss/Train": avr_recon_loss, "VQ loss/Train": avr_vq_loss})
     writer.close()
 
 if __name__ == '__main__':
@@ -79,8 +97,9 @@ if __name__ == '__main__':
     # x_head, vq_loss = model(tsdf)
 
     criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    learning_rate = 0.001
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     epoch = 5
 
-    train(model, data_loader, criterion, optimizer, epoch, device)
+    train(model, data_loader, criterion, learning_rate, optimizer, epoch, device)
     

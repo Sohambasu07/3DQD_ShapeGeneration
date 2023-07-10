@@ -2,4 +2,5 @@ ShapeNetCore.v2/
 dataset/
 runs/
 __pycache__/
+wandb/
 .DS_Store
