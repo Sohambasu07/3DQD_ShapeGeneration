@@ -1,5 +1,7 @@
 import numpy as np
 import torch
+import trimesh
+import skimage
 
 def shape2patch(x, patch_size=8, stride=8):
         #x shape (1, 1, 64, 64, 64)
@@ -22,6 +24,12 @@ def patch2shape(x_head, patch_size=8, output_size=64):
     folded_x_head = folded_x_head.permute(0, 3, 1, 4, 2, 5).reshape(output_size, output_size, output_size)
     # folded_x_head = fold(x_head)
     return folded_x_head
+
+def display_tsdf(tsdf):
+    tsdf = tsdf.numpy()
+    vertices, faces, normals, _ = skimage.measure.marching_cubes(tsdf, level=0.05)
+    mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_normals=normals)
+    mesh.show()
 
 
 if __name__ == '__main__':
