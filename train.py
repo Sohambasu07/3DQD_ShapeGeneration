@@ -70,10 +70,12 @@ def train(model, train_dataloader, val_dataloader,
             avr_tot_loss_buffer.append(total_loss.item())
             avr_recon_loss_buffer.append(recon_loss.item())
             avr_vq_loss_buffer.append(vq_loss.item())
+
             iter_no = epoch * len(train_dataloader) + batch_idx
             avr_tot_loss = np.mean(avr_tot_loss_buffer)
             avr_recon_loss = np.mean(avr_recon_loss_buffer)
             avr_vq_loss = np.mean(avr_vq_loss_buffer)
+
             if batch_idx % 50 == 0:
             #     iter_no = epoch * len(data_loader) + batch_idx
             #     avr_tot_loss = np.mean(avr_tot_loss_buffer)
@@ -83,6 +85,7 @@ def train(model, train_dataloader, val_dataloader,
                 writer.add_scalar('Total loss/Train', avr_tot_loss, iter_no)
                 writer.add_scalar('Recon loss/Train', avr_recon_loss, iter_no)
                 writer.add_scalar('VQ loss/Train', avr_vq_loss, iter_no)
+                
             wandb.log({"Total loss/Train": avr_tot_loss, "Recon loss/Train": avr_recon_loss, "VQ loss/Train": avr_vq_loss})
             tqdm_dataloader.set_postfix_str("Total Loss: {:.4f} Recon Loss: {:.4f}, Vq Loss: {:.4f}".format(
                                                                                 avr_tot_loss, avr_recon_loss, avr_vq_loss))
@@ -118,14 +121,16 @@ def train(model, train_dataloader, val_dataloader,
             val_avr_tot_loss = np.mean(val_total_loss_buffer)
             val_avr_recon_loss = np.mean(val_recon_loss_buffer)
             val_avr_vq_loss = np.mean(val_vq_loss_buffer)
-            
+
             writer.add_scalar('Total loss/Val', val_avr_tot_loss, epoch)
             writer.add_scalar('Recon loss/Val', val_avr_recon_loss, epoch)
             writer.add_scalar('VQ loss/Val', val_avr_vq_loss, epoch)
 
-            wandb.log({"Total loss/Val": val_avr_tot_loss, "Recon loss/Val": val_avr_recon_loss, "VQ loss/Val": val_avr_vq_loss})
             vtqdm_dataloader.set_postfix_str("Val Total Loss: {:.4f} Val Recon Loss: {:.4f}, Val Vq Loss: {:.4f}".format(
                                                                                 val_avr_tot_loss, val_avr_recon_loss, val_avr_vq_loss))
+            
+        wandb.log({"Total loss/Val": val_avr_tot_loss, "Recon loss/Val": val_avr_recon_loss, "VQ loss/Val": val_avr_vq_loss})
+            
         if val_avr_tot_loss < val_loss_bench:
             val_loss_bench = val_total_loss
             torch.save(model.state_dict(), './best_model.pth')
