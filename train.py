@@ -94,6 +94,10 @@ def train(model, train_dataloader, val_dataloader,
 
         val_total_loss = 0
 
+        val_total_loss_buffer = []
+        val_recon_loss_buffer = []
+        val_vq_loss_buffer = []
+
         vtqdm_dataloader = tqdm(val_dataloader)
         for batch_idx, tsdf_sample in enumerate(vtqdm_dataloader):
             model_path = tsdf_sample[1][0]
@@ -106,14 +110,23 @@ def train(model, train_dataloader, val_dataloader,
                 reconstructed_data, val_vq_loss = model(patched_tsdf)
                 val_recon_loss = criterion(reconstructed_data, patched_tsdf)
             val_total_loss = val_recon_loss + val_vq_loss
-            writer.add_scalar('Total loss/Val', val_total_loss, epoch)
-            writer.add_scalar('Recon loss/Val', val_recon_loss, epoch)
-            writer.add_scalar('VQ loss/Val', val_vq_loss, epoch)
 
-            wandb.log({"Total loss/Val": val_total_loss, "Recon loss/Val": val_recon_loss, "VQ loss/Val": val_vq_loss})
+            val_total_loss_buffer.append(val_total_loss.item())
+            val_recon_loss_buffer.append(val_recon_loss.item())
+            val_vq_loss_buffer.append(val_vq_loss.item())
+
+            val_avr_tot_loss = np.mean(val_total_loss_buffer)
+            val_avr_recon_loss = np.mean(val_recon_loss_buffer)
+            val_avr_vq_loss = np.mean(val_vq_loss_buffer)
+            
+            writer.add_scalar('Total loss/Val', val_avr_tot_loss, epoch)
+            writer.add_scalar('Recon loss/Val', val_avr_recon_loss, epoch)
+            writer.add_scalar('VQ loss/Val', val_avr_vq_loss, epoch)
+
+            wandb.log({"Total loss/Val": val_avr_tot_loss, "Recon loss/Val": val_avr_recon_loss, "VQ loss/Val": val_avr_vq_loss})
             vtqdm_dataloader.set_postfix_str("Val Total Loss: {:.4f} Val Recon Loss: {:.4f}, Val Vq Loss: {:.4f}".format(
-                                                                                val_total_loss, val_recon_loss, val_vq_loss))
-        if val_total_loss < val_loss_bench:
+                                                                                val_avr_tot_loss, val_avr_recon_loss, val_avr_vq_loss))
+        if val_avr_tot_loss < val_loss_bench:
             val_loss_bench = val_total_loss
             torch.save(model.state_dict(), './best_model.pth')
             logging.info("Model saved")
