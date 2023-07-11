@@ -35,9 +35,26 @@ def display_tsdf(tsdf):
 if __name__ == '__main__':
     # test_x = torch.zeros((512, 1, 8, 8, 8))
     test_x = torch.randn((1, 1, 64, 64, 64))
+
+    from tsdf_dataset import ShapeNet
+    from torch.utils.data import DataLoader
+ 
+    shapenet_dataset = ShapeNet(r'./dataset')
+    data_loader = DataLoader(shapenet_dataset, batch_size=2, shuffle=True)
+    tsdf_sample = next(iter(data_loader))
+    model_path = tsdf_sample[1][0]
+    tsdf_x = tsdf_sample[0][0]
+    display_tsdf(tsdf_x)
+
+    tsdf_x = torch.reshape(tsdf_x, (1, 1, *tsdf_x.shape))
+    print(tsdf_x.shape)
+
     test_x = shape2patch(test_x)
     folded_x = patch2shape(test_x)
+    display_tsdf(folded_x)
+
     folded_x = torch.unsqueeze(torch.unsqueeze(folded_x, dim=0), dim=0)
+
     if test_x.all() == folded_x.all():
         print("Success")
     print(folded_x.shape)
