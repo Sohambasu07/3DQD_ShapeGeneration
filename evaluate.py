@@ -45,8 +45,8 @@ def evaluate(test_dataloader, model, criterion, device='cuda'):
         test_avr_com_loss = np.mean(test_com_loss_buffer)
         
         tqdm_dataloader.set_postfix_str("Total Loss: {:.4f} \
-                                        Recon Loss: {:.4f}, \
-                                        Vq Loss: {:.4f}, \
+                                        Recon Loss: {:.4f} \
+                                        Vq Loss: {:.4f} \
                                         Commit Loss".format(
                                         test_avr_tot_loss, test_avr_recon_loss, test_avr_vq_loss))
         
