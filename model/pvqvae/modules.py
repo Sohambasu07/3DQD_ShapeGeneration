@@ -19,14 +19,14 @@ class ResNet_block3D(nn.Module):
                                self.kernel_size, self.stride,
                                self.padding)
         self.dropout1 = nn.Dropout3d(dropout_rate)
-        self.bn1 = nn.BatchNorm3d(out_channels)
-        self.relu1 = nn.ReLU()
+        self.norm1 = Normalize(self.out_channels) # nn.BatchNorm3d(out_channels)
+        self.nonlinearity1 = nn.ReLU()
         self.conv2 = nn.Conv3d(self.out_channels, self.out_channels,
                                self.kernel_size, self.stride,
                                self.padding)
         self.dropout2 = nn.Dropout3d(dropout_rate)
-        self.bn2 = nn.BatchNorm3d(out_channels)
-        self.relu2 = nn.ReLU()
+        self.norm2 = Normalize(self.out_channels) # nn.BatchNorm3d(out_channels)
+        self.nonlinearity2 = nn.ReLU()
 
         self.use_conv_shortcut = use_conv_shortcut
 
@@ -48,12 +48,12 @@ class ResNet_block3D(nn.Module):
         inp = x
         x = self.conv1(x)
         x = self.dropout1(x)
-        x = self.bn1(x)
-        x = self.relu1(x)
+        x = self.norm1(x)
+        x = self.nonlinearity2(x)
         x = self.conv2(x)
         x = self.dropout2(x)
-        x = self.bn2(x)
-        x = self.relu2(x)
+        x = self.norm2(x)
+        x = self.nonlinearity2(x)
 
         if self.in_channels != self.out_channels:
             if self.use_conv_shortcut:
@@ -70,7 +70,8 @@ class Attention3D(nn.Module):
     def __init__(self, in_channels):
         super().__init__()
         self.in_channels = in_channels
-
+        
+        self.norm = Normalize(self.in_channels)
         self.query = nn.Conv3d(in_channels, in_channels, kernel_size=1,
                                stride=1, padding=0)
         self.key = nn.Conv3d(in_channels, in_channels, kernel_size=1,
@@ -81,6 +82,7 @@ class Attention3D(nn.Module):
                                     stride=1, padding=0)
 
     def forward(self, x):
+        x = self.norm(x)
         q = self.query(x)
         k = self.key(x)
         v = self.value(x)
