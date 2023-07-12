@@ -5,3 +5,4 @@ __pycache__/
 wandb/
 .DS_Store
 best_model.pth
+final_model.pth

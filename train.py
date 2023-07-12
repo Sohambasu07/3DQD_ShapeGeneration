@@ -39,7 +39,7 @@ def train(model, train_dataloader, val_dataloader,
 
     logging.info("Starting training")
 
-    val_loss_bench = 100000
+    val_loss_bench = 100000.0
     for epoch in range(num_epoch):
         # Training
         model.train()  # Set the model to train mode
@@ -60,8 +60,9 @@ def train(model, train_dataloader, val_dataloader,
             tsdf = tsdf.to(device)
             tsdf = torch.reshape(tsdf, (1, 1, *tsdf.shape))
             patched_tsdf = shape2patch(tsdf)
-            reconstructed_data, vq_loss = model(patched_tsdf)  # Forward pass
-            recon_loss = criterion(reconstructed_data, patched_tsdf)  # Compute the loss
+            patched_recon_data, vq_loss = model(patched_tsdf)  # Forward pass
+            reconstructed_data = patch2shape(patched_recon_data)
+            recon_loss = criterion(reconstructed_data, tsdf)  # Compute the loss
 
             total_loss = recon_loss + vq_loss
             total_loss.backward()  # Backpropagation
@@ -85,7 +86,7 @@ def train(model, train_dataloader, val_dataloader,
                 writer.add_scalar('Total loss/Train', avr_tot_loss, iter_no)
                 writer.add_scalar('Recon loss/Train', avr_recon_loss, iter_no)
                 writer.add_scalar('VQ loss/Train', avr_vq_loss, iter_no)
-                
+
             wandb.log({"Total loss/Train": avr_tot_loss, "Recon loss/Train": avr_recon_loss, "VQ loss/Train": avr_vq_loss})
             tqdm_dataloader.set_postfix_str("Total Loss: {:.4f} Recon Loss: {:.4f}, Vq Loss: {:.4f}".format(
                                                                                 avr_tot_loss, avr_recon_loss, avr_vq_loss))
@@ -95,7 +96,7 @@ def train(model, train_dataloader, val_dataloader,
         # Validation
         model.eval()
 
-        val_total_loss = 0
+        val_avr_total_loss = 0.0
 
         val_total_loss_buffer = []
         val_recon_loss_buffer = []
@@ -110,8 +111,9 @@ def train(model, train_dataloader, val_dataloader,
             tsdf = torch.reshape(tsdf, (1, 1, *tsdf.shape))
             patched_tsdf = shape2patch(tsdf)
             with torch.no_grad():
-                reconstructed_data, val_vq_loss = model(patched_tsdf)
-                val_recon_loss = criterion(reconstructed_data, patched_tsdf)
+                patched_recon_data, val_vq_loss = model(patched_tsdf)
+                reconstructed_data = patch2shape(patched_recon_data)
+                val_recon_loss = criterion(reconstructed_data, tsdf)
             val_total_loss = val_recon_loss + val_vq_loss
 
             val_total_loss_buffer.append(val_total_loss.item())
@@ -130,11 +132,17 @@ def train(model, train_dataloader, val_dataloader,
                                                                                 val_avr_tot_loss, val_avr_recon_loss, val_avr_vq_loss))
             
         wandb.log({"Total loss/Val": val_avr_tot_loss, "Recon loss/Val": val_avr_recon_loss, "VQ loss/Val": val_avr_vq_loss})
+        torch.save(model.state_dict(), './final_model.pth')
+        logging.info("Model saved")
+        logging.info(val_avr_tot_loss)
+        logging.info(val_loss_bench)
             
         if val_avr_tot_loss < val_loss_bench:
-            val_loss_bench = val_total_loss
+            val_loss_bench = val_avr_tot_loss
             torch.save(model.state_dict(), './best_model.pth')
-            logging.info("Model saved")
+            logging.info("Best Model saved")
+            logging.info(val_avr_tot_loss)
+            logging.info(val_loss_bench)
 
     writer.close()
 
@@ -172,6 +180,7 @@ if __name__ == '__main__':
     summary(model, input_size=(512, 1, 8, 8, 8))
     # x_head, vq_loss = model(tsdf)
 
+    # Set Hyperparameters
     criterion = nn.MSELoss()
     learning_rate = 0.001
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)

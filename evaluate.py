@@ -25,10 +25,9 @@ def evaluate(test_dataloader, model, criterion, device='cuda'):
         tsdf = torch.reshape(tsdf, (1, 1, *tsdf.shape))
         patched_tsdf = shape2patch(tsdf)
         with torch.no_grad():
-            reconstructed_data, test_vq_loss = model(patched_tsdf)
-            test_recon_loss = criterion(reconstructed_data, patched_tsdf)
-            # reconstructed_data = patch2shape(reconstructed_data)
-            # test_recon_loss = criterion(torch.unsqueeze(torch.unsqueeze(reconstructed_data, dim=0), dim=0), tsdf)
+            patch_recon_data, test_vq_loss = model(patched_tsdf)
+            reconstructed_data = patch2shape(patch_recon_data)
+            test_recon_loss = criterion(reconstructed_data, tsdf)
 
         test_total_loss = test_recon_loss + test_vq_loss
 
@@ -43,11 +42,12 @@ def evaluate(test_dataloader, model, criterion, device='cuda'):
         tqdm_dataloader.set_postfix_str("Test Total Loss: {:.4f} Test Recon Loss: {:.4f}, Test Vq Loss: {:.4f}".format(
                                             test_avr_tot_loss, test_avr_recon_loss, test_avr_vq_loss))
         
-        # if batch_idx == 150:
-        #     rec_data = patch2shape(reconstructed_data)
-        #     print(rec_data.min(), rec_data.max())
-        #     rec_data = rec_data.cpu()
-        #     display_tsdf(rec_data)
+        if batch_idx == 150:
+            rec_data = patch2shape(reconstructed_data)
+            rec_data = rec_data.squeeze().squeeze()
+            print(rec_data.min(), rec_data.max())
+            rec_data = rec_data.cpu()
+            display_tsdf(rec_data, mc_level=(rec_data.max()+rec_data.min())/2.0)
 
         
 
@@ -78,7 +78,7 @@ if __name__ == '__main__':
     model = VQVAE(embed_dim, num_embed).to(device)
 
     # Load model
-    model.load_state_dict(torch.load('./best_model.pth'))
+    model.load_state_dict(torch.load('./final_model.pth'))
     model.to(device)
 
     # Load criterion
