@@ -16,7 +16,7 @@ from torchinfo import summary
 
 # Training loop
 def train(model, train_dataloader, val_dataloader, 
-          criterion, learning_rate, optimizer, num_epoch=5,  device='cuda'):
+          criterion, learning_rate, optimizer, num_epoch=5, L1_lambda = 0.001, device='cuda'):
     
     logging.basicConfig(level=logging.INFO)
     writer = SummaryWriter()
@@ -51,6 +51,8 @@ def train(model, train_dataloader, val_dataloader,
         avr_recon_loss_buffer = []
         avr_vq_loss_buffer = []
         avr_com_loss_buffer = []
+        avr_reg_loss_buffer = []
+
         tqdm_dataloader = tqdm(train_dataloader)
         for batch_idx, tsdf_sample in enumerate(tqdm_dataloader):
             model_path = tsdf_sample[1][0]
@@ -65,7 +67,15 @@ def train(model, train_dataloader, val_dataloader,
             reconstructed_data = patch2shape(patched_recon_data)
             recon_loss = criterion(reconstructed_data, tsdf)  # Compute the loss
 
-            total_loss = recon_loss + vq_loss + com_loss
+            # Adding regularization
+
+            L1_penalty = nn.L1Loss()
+            L1_regloss = 0.0
+            for param in model.parameters():
+                L1_regloss += L1_penalty(param, torch.zeros_like(param))
+            L1_regloss = L1_lambda * L1_regloss
+
+            total_loss = recon_loss + vq_loss + com_loss + L1_regloss
             total_loss.backward()  # Backpropagation
             optimizer.step()  # Update the weights
 
@@ -73,12 +83,14 @@ def train(model, train_dataloader, val_dataloader,
             avr_recon_loss_buffer.append(recon_loss.item())
             avr_vq_loss_buffer.append(vq_loss.item())
             avr_com_loss_buffer.append(com_loss.item())
+            avr_reg_loss_buffer.append(L1_regloss.item())
 
             iter_no = epoch * len(train_dataloader) + batch_idx
             avr_tot_loss = np.mean(avr_tot_loss_buffer)
             avr_recon_loss = np.mean(avr_recon_loss_buffer)
             avr_vq_loss = np.mean(avr_vq_loss_buffer)
             avr_com_loss = np.mean(avr_com_loss_buffer)
+            avr_reg_loss = np.mean(avr_reg_loss_buffer)
 
             if batch_idx % 50 == 0:
             #     iter_no = epoch * len(data_loader) + batch_idx
@@ -90,18 +102,22 @@ def train(model, train_dataloader, val_dataloader,
                 writer.add_scalar('Recon loss/Train', avr_recon_loss, iter_no)
                 writer.add_scalar('VQ loss/Train', avr_vq_loss, iter_no)
                 writer.add_scalar('Commit loss/Train', avr_com_loss, iter_no)
+                writer.add_scalar('Regularization loss/Train', avr_reg_loss, iter_no)
                 writer.add_histogram("Codebook index hist", model.vq.codebook_hist, iter_no)
+
                 wandb.log({'Codebook index hist': wandb.Histogram(model.vq.codebook_hist)})
 
             wandb.log({"Total loss/Train": avr_tot_loss, 
                        "Recon loss/Train": avr_recon_loss, 
                        "VQ loss/Train": avr_vq_loss,
-                       "Commit loss/Train": avr_com_loss})
+                       "Commit loss/Train": avr_com_loss,
+                       "Regularization loss/Train": avr_reg_loss})
             
             tqdm_dataloader.set_postfix_str("Total Loss: {:.4f} \
                                             Recon Loss: {:.4f}, \
                                             Vq Loss: {:.4f}, \
-                                            Commit Loss: {:.4f}".format(
+                                            Commit Loss: {:.4f}, \
+                                            Reg Loss: {:.4f}".format(
                                             avr_tot_loss, avr_recon_loss, avr_vq_loss, avr_com_loss))
         
         print()
@@ -209,12 +225,14 @@ if __name__ == '__main__':
     learning_rate = 0.001
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     epoch = 5
+    L1_lambda = 0.001
 
     train(model, train_dataloader=train_loader, 
                  val_dataloader=val_loader, 
                  criterion=criterion, 
                  learning_rate=learning_rate, 
                  optimizer=optimizer, 
-                 num_epoch=epoch, 
+                 num_epoch=epoch,
+                 L1_lambda=L1_lambda, 
                  device=device)
     
