@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import trimesh
 import skimage
+import pickle
 
 def shape2patch(x, patch_size=8, stride=8):
         #x shape (1, 1, 64, 64, 64)
@@ -23,37 +24,33 @@ def patch2shape(x_head, patch_size=8, output_size=64):
     folded_x_head = x_head.reshape(num_patches, num_patches, num_patches, patch_size, patch_size, patch_size)
     folded_x_head = folded_x_head.permute(0, 3, 1, 4, 2, 5).reshape(output_size, output_size, output_size)
     # folded_x_head = fold(x_head)
+    folded_x_head = torch.unsqueeze(torch.unsqueeze(folded_x_head, dim=0), dim=0)
     return folded_x_head
 
-def display_tsdf(tsdf):
+def display_tsdf(tsdf, mc_level=0.0):
     tsdf = tsdf.numpy()
-    vertices, faces, normals, _ = skimage.measure.marching_cubes(tsdf, level=0.05)
+    vertices, faces, normals, _ = skimage.measure.marching_cubes(tsdf, level=mc_level)
     mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_normals=normals)
     mesh.show()
 
 
 if __name__ == '__main__':
     # test_x = torch.zeros((512, 1, 8, 8, 8))
-    test_x = torch.randn((1, 1, 64, 64, 64))
+    # test_x = torch.randn((1, 1, 64, 64, 64))
+    #load a saved tsdf file and display to verify
+    with open('dataset/plane/plane_1.pkl', 'rb') as f:
+        tsdf_sample = pickle.load(f)
 
-    from tsdf_dataset import ShapeNet
-    from torch.utils.data import DataLoader
- 
-    shapenet_dataset = ShapeNet(r'./dataset')
-    data_loader = DataLoader(shapenet_dataset, batch_size=2, shuffle=True)
-    tsdf_sample = next(iter(data_loader))
-    model_path = tsdf_sample[1][0]
-    tsdf_x = tsdf_sample[0][0]
-    display_tsdf(tsdf_x)
+    test_x= tsdf_sample['tsdf']
 
-    tsdf_x = torch.reshape(tsdf_x, (1, 1, *tsdf_x.shape))
-    print(tsdf_x.shape)
+    test_x = torch.from_numpy(test_x)
+    display_tsdf(test_x, mc_level=0.0)
 
+    test_x = torch.unsqueeze(torch.unsqueeze(test_x, dim=0), dim=0)
     test_x = shape2patch(test_x)
     folded_x = patch2shape(test_x)
-    display_tsdf(folded_x)
 
-    folded_x = torch.unsqueeze(torch.unsqueeze(folded_x, dim=0), dim=0)
+    display_tsdf(folded_x.squeeze().squeeze().cpu(), mc_level=0.0)
 
     if test_x.all() == folded_x.all():
         print("Success")

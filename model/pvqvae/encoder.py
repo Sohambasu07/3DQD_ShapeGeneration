@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from model.pvqvae.modules import ResNet_block3D, Attention3D, UpSample3D, DownSample3D, groupNorm
+from model.pvqvae.modules import ResNet_block3D, Attention3D, UpSample3D, DownSample3D, Normalize
 
 class Encoder3D(nn.Module):
     def __init__(self, in_channels=1, conv1_outchannels=64):
@@ -29,9 +29,10 @@ class Encoder3D(nn.Module):
         self.layers.append(Attention3D(self.outch))
         self.layers.append(ResNet_block3D(self.outch, self.outch))
 
+        self.norm = Normalize(self.outch)
+        self.swish = nn.SiLU()
         self.conv_out = nn.Conv3d(self.outch, self.outch, kernel_size=3, 
                                   stride=1, padding=1)
-        self.nonlinearity = nn.SiLU()
 
     def forward(self, x):
         x = x.float()
@@ -40,6 +41,7 @@ class Encoder3D(nn.Module):
         for module in self.layers:
             x = module(x)
 
-        x = self.nonlinearity(x)
+        x = self.norm(x)
+        x = self.swish(x)
         x = self.conv_out(x)
         return x

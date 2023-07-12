@@ -149,8 +149,16 @@ class DownSample3D(nn.Module):
         # x = self.bn(x)
         return x
     
-def groupNorm(x, num_channels, num_groups=32):
-    return nn.GroupNorm(num_groups = num_groups, num_channels = num_channels)
+# def groupNorm(x, num_channels, num_groups=32):
+#     return nn.GroupNorm(num_groups = num_groups, num_channels = num_channels)
+
+def Normalize(in_channels):
+    if in_channels <= 32:
+        num_groups = in_channels // 4
+    else:
+        num_groups = 32
+
+    return torch.nn.GroupNorm(num_groups=num_groups, num_channels=in_channels, eps=1e-6, affine=True)
 
 def VQ(enc_embed : torch.Tensor, codebook : torch.Tensor):
     #encoder embed: batch_size x block_count x Nz
