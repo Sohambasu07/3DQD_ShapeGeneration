@@ -49,7 +49,7 @@ if __name__ == '__main__':
     tsdf_x = torch.reshape(tsdf_x, (1, 1, *tsdf_x.shape))
     print(tsdf_x.shape)
 
-    test_x = shape2patch(test_x)
+    test_x = shape2patch(tsdf_x)
     folded_x = patch2shape(test_x)
     display_tsdf(folded_x)
 

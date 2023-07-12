@@ -41,9 +41,15 @@ class ShapeNet(Dataset):
         return len(self.paths)
     
     def split_dataset(self):
-        split_dataset = random_split(self, [int(len(self)*self.split_ratio['train']), 
-                                            int(len(self)*self.split_ratio['val']), 
-                                            int(len(self)*self.split_ratio['test'])])
+        # print(int(len(self)*self.split_ratio['train']) + 
+        #                                     int(len(self)*self.split_ratio['val']) +
+        #                                     int(len(self)*self.split_ratio['test']))
+        # print(len(self))
+        train_size = int(len(self)*self.split_ratio['train'])
+        val_size = int(len(self)*self.split_ratio['val'])
+        split_dataset = random_split(self, [train_size, 
+                                            val_size, 
+                                            len(self) - (train_size + val_size)])
         return split_dataset[0], split_dataset[1], split_dataset[2]
     
 
