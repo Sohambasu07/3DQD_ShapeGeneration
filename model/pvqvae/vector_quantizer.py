@@ -32,10 +32,10 @@ class VectorQuantizer(nn.Module):
         z_q = self.embedding(codebook_idxs).view(z.shape)
 
         # Third term in the loss but implemented differently from what is in the paper
-        loss = self.beta * torch.mean((z_q.detach() - z) ** 2) + \
-               torch.mean((z_q - z.detach()) ** 2)
+        vq_loss = torch.mean((z_q - z.detach()) ** 2) 
+        commitment_loss = self.beta * torch.mean((z_q.detach() - z) ** 2)
 
         # preserve gradients
         z_q = z + (z_q - z).detach()
 
-        return z_q, loss
+        return z_q, vq_loss, commitment_loss, codebook_idxs

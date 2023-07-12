@@ -10,11 +10,14 @@ from utils import shape2patch, patch2shape, display_tsdf
 
 def evaluate(test_dataloader, model, criterion, device='cuda'):
 
+    print("Starting evaluation")
+
     model.eval()
 
     test_total_loss_buffer = []
     test_recon_loss_buffer = []
     test_vq_loss_buffer = []
+    test_com_loss_buffer = []
 
     tqdm_dataloader = tqdm(test_dataloader)
     for batch_idx, tsdf_sample in enumerate(tqdm_dataloader):
@@ -25,22 +28,27 @@ def evaluate(test_dataloader, model, criterion, device='cuda'):
         tsdf = torch.reshape(tsdf, (1, 1, *tsdf.shape))
         patched_tsdf = shape2patch(tsdf)
         with torch.no_grad():
-            patch_recon_data, test_vq_loss = model(patched_tsdf)
+            patch_recon_data, test_vq_loss, test_com_loss = model(patched_tsdf)
             reconstructed_data = patch2shape(patch_recon_data)
             test_recon_loss = criterion(reconstructed_data, tsdf)
 
-        test_total_loss = test_recon_loss + test_vq_loss
+        test_total_loss = test_recon_loss + test_vq_loss + test_com_loss
 
         test_total_loss_buffer.append(test_total_loss.item())
         test_recon_loss_buffer.append(test_recon_loss.item())
         test_vq_loss_buffer.append(test_vq_loss.item())
+        test_com_loss_buffer.append(test_com_loss.item())
 
         test_avr_tot_loss = np.mean(test_total_loss_buffer)
         test_avr_recon_loss = np.mean(test_recon_loss_buffer)
         test_avr_vq_loss = np.mean(test_vq_loss_buffer)
+        test_avr_com_loss = np.mean(test_com_loss_buffer)
         
-        tqdm_dataloader.set_postfix_str("Test Total Loss: {:.4f} Test Recon Loss: {:.4f}, Test Vq Loss: {:.4f}".format(
-                                            test_avr_tot_loss, test_avr_recon_loss, test_avr_vq_loss))
+        tqdm_dataloader.set_postfix_str("Total Loss: {:.4f} \
+                                        Recon Loss: {:.4f}, \
+                                        Vq Loss: {:.4f}, \
+                                        Commit Loss".format(
+                                        test_avr_tot_loss, test_avr_recon_loss, test_avr_vq_loss))
         
         if batch_idx == 150:
             rec_data = patch2shape(reconstructed_data)

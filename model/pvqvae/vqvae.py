@@ -17,10 +17,10 @@ class VQVAE(nn.Module):
         # x = torch.reshape(x, (1, 1, *x.shape))
         # patched_tsdf = shape2patch(x)
         encoded = self.encoder(patched_tsdf)
-        z_q, vq_loss = self.vq(encoded)
+        z_q, vq_loss, commitment_loss, _ = self.vq(encoded)
         x_head = self.decoder(z_q)
 
-        return x_head, vq_loss
+        return x_head, vq_loss, commitment_loss
     
 
 
