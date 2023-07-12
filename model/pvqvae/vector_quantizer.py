@@ -8,6 +8,7 @@ class VectorQuantizer(nn.Module):
         self.n_embed = n_embed
         self.e_dim = e_dim
         self.beta = beta
+        self.codebook_hist = torch.zeros((self.n_embed)).to("cuda")
 
         # Create a lookup table with n_embed items, each of size e_dim
         self.embedding = nn.Embedding(self.n_embed, self.e_dim)
@@ -29,6 +30,7 @@ class VectorQuantizer(nn.Module):
         similarity = torch.mm(z_flattened, embeddings.t())
 
         codebook_idxs = torch.argmax(similarity, dim=-1)
+        self.codebook_hist[codebook_idxs] += 1
         z_q = self.embedding(codebook_idxs).view(z.shape)
 
         # Third term in the loss but implemented differently from what is in the paper

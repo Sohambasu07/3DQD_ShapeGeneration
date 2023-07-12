@@ -90,6 +90,8 @@ def train(model, train_dataloader, val_dataloader,
                 writer.add_scalar('Recon loss/Train', avr_recon_loss, iter_no)
                 writer.add_scalar('VQ loss/Train', avr_vq_loss, iter_no)
                 writer.add_scalar('Commit loss/Train', avr_com_loss, iter_no)
+                writer.add_histogram("Codebook index hist", model.vq.codebook_hist, iter_no)
+                wandb.log({'Codebook index hist': wandb.Histogram(model.vq.codebook_hist)})
 
             wandb.log({"Total loss/Train": avr_tot_loss, 
                        "Recon loss/Train": avr_recon_loss, 
