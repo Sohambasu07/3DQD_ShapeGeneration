@@ -105,7 +105,7 @@ def train(model, train_dataloader, val_dataloader,
                 writer.add_scalar('Regularization loss/Train', avr_reg_loss, iter_no)
                 writer.add_histogram("Codebook index hist", model.vq.codebook_hist, iter_no)
 
-                wandb.log({'Codebook index hist': wandb.Histogram(model.vq.codebook_hist)})
+                wandb.log({'Codebook index hist': wandb.Histogram((model.vq.codebook_hist).cpu().numpy())})
 
             wandb.log({"Total loss/Train": avr_tot_loss, 
                        "Recon loss/Train": avr_recon_loss, 
@@ -118,7 +118,11 @@ def train(model, train_dataloader, val_dataloader,
                                             Vq Loss: {:.4f}, \
                                             Commit Loss: {:.4f}, \
                                             Reg Loss: {:.4f}".format(
-                                            avr_tot_loss, avr_recon_loss, avr_vq_loss, avr_com_loss))
+                                            avr_tot_loss, 
+                                            avr_recon_loss, 
+                                            avr_vq_loss, 
+                                            avr_com_loss, 
+                                            avr_reg_loss))
         
         print()
         
