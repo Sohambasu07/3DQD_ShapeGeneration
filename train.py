@@ -113,16 +113,9 @@ def train(model, train_dataloader, val_dataloader,
                        "Commit loss/Train": avr_com_loss,
                        "Regularization loss/Train": avr_reg_loss})
             
-            tqdm_dataloader.set_postfix_str("Total Loss: {:.4f} \
-                                            Recon Loss: {:.4f} \
-                                            Vq Loss: {:.4f} \
-                                            Commit Loss: {:.4f} \
-                                            Reg Loss: {:.4f}".format(
-                                            avr_tot_loss, 
-                                            avr_recon_loss, 
-                                            avr_vq_loss, 
-                                            avr_com_loss, 
-                                            avr_reg_loss))
+            tqdm_dataloader.set_postfix_str("Total Loss: {:.4f}, Recon Loss: {:.4f}, Vq Loss: {:.4f}, Commit Loss: {:.4f}, Reg Loss: {:.4f}"\
+                                            .format(avr_tot_loss, avr_recon_loss, 
+                                            avr_vq_loss, avr_com_loss, avr_reg_loss))
         
         print()
         
@@ -165,11 +158,9 @@ def train(model, train_dataloader, val_dataloader,
             writer.add_scalar('VQ loss/Val', val_avr_vq_loss, epoch)
             writer.add_scalar('Commit loss/Val', val_avr_com_loss, epoch)
 
-            vtqdm_dataloader.set_postfix_str("Val Total Loss: {:.4f} \
-                                             Val Recon Loss: {:.4f} \
-                                             Val Vq Loss: {:.4f} \
-                                             Commit Loss: {:.4f}".format(
-                                            val_avr_tot_loss, val_avr_recon_loss, val_avr_vq_loss))
+            vtqdm_dataloader.set_postfix_str("Val Total Loss: {:.4f}, Val Recon Loss: {:.4f}, Val Vq Loss: {:.4f}, Commit Loss: {:.4f}"\
+                                             .format(val_avr_tot_loss, val_avr_recon_loss, 
+                                                     val_avr_vq_loss, val_avr_com_loss))
             
         wandb.log({"Total loss/Val": val_avr_tot_loss, 
                    "Recon loss/Val": val_avr_recon_loss, 
