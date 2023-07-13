@@ -44,18 +44,16 @@ def evaluate(test_dataloader, model, criterion, device='cuda'):
         test_avr_vq_loss = np.mean(test_vq_loss_buffer)
         test_avr_com_loss = np.mean(test_com_loss_buffer)
         
-        tqdm_dataloader.set_postfix_str("Total Loss: {:.4f} \
-                                        Recon Loss: {:.4f} \
-                                        Vq Loss: {:.4f} \
-                                        Commit Loss".format(
-                                        test_avr_tot_loss, test_avr_recon_loss, test_avr_vq_loss))
+        tqdm_dataloader.set_postfix_str("Total Loss: {:.4f}, Recon Loss: {:.4f}, Vq Loss: {:.4f}, Commit Loss"\
+                                        .format(test_avr_tot_loss, test_avr_recon_loss, 
+                                                test_avr_vq_loss, test_avr_com_loss))
         
-        if batch_idx == 150:
+        if batch_idx == 1:
             rec_data = patch2shape(reconstructed_data)
             rec_data = rec_data.squeeze().squeeze()
             print(rec_data.min(), rec_data.max())
             rec_data = rec_data.cpu()
-            display_tsdf(rec_data, mc_level=(rec_data.max()+rec_data.min())/2.0)
+            display_tsdf(rec_data, mc_level=0.1200)#(rec_data.max()+rec_data.min())/2.0)
 
         
 
@@ -86,7 +84,7 @@ if __name__ == '__main__':
     model = VQVAE(embed_dim, num_embed).to(device)
 
     # Load model
-    model.load_state_dict(torch.load('./final_model.pth'))
+    model.load_state_dict(torch.load('./best_model.pth'))
     model.to(device)
 
     # Load criterion
