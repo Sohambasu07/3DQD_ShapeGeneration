@@ -1,16 +1,19 @@
-import numpy as np
 import trimesh
-import math
-from utils import createCmap, viz_trimesh
 import pickle
 import os
 import json
 import skimage
 
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, random_split
+from utils import display_tsdf
 
 class ShapeNet(Dataset):
-    def __init__(self, dataset_dir):
+    def __init__(self, dataset_dir, split = {'train': True, 'val': True, 'test': True}, 
+                                    split_ratio = {'train': 0.8, 'val': 0.1, 'test': 0.1}, 
+                                    ):
+        
+        self.split = split
+        self.split_ratio = split_ratio
 
         with open(os.path.join(dataset_dir, 'dataset_info.json')) as fp:
             meta_data = json.load(fp)
@@ -37,6 +40,14 @@ class ShapeNet(Dataset):
     def __len__(self):
         return len(self.paths)
     
+    def split_dataset(self):
+        train_size = int(len(self)*self.split_ratio['train'])
+        val_size = int(len(self)*self.split_ratio['val'])
+        split_dataset = random_split(self, [train_size, 
+                                            val_size, 
+                                            len(self)-train_size-val_size])
+        return split_dataset[0], split_dataset[1], split_dataset[2]
+    
 
 
 if __name__ == '__main__':
@@ -55,25 +66,7 @@ if __name__ == '__main__':
     print(model_path)
     print(tsdf.shape)
     
-
-
-    # num_points = 512
-
-    # mesh = trimesh.load_mesh(model_path)
-    # meshes = mesh.dump(concatenate=True)
-    # merged_mesh = trimesh.util.concatenate(meshes)
-    # merged_mesh.show()
-
-    # grid = np.linspace(-1, 1, math.ceil(num_points**(1/3)))
-    # points3D = np.array([np.array([x, y, z]) for x in grid for y in grid for z in grid])
-
-    # colormap = createCmap(tsdf)
-
-    # viz_trimesh(merged_mesh, points3D, tsdf, colormap)
-
-    tsdf = tsdf.numpy()
-    vertices, faces, normals, _ = skimage.measure.marching_cubes(tsdf, level=0)
-    mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_normals=normals)
-    mesh.show()
+    display_tsdf(tsdf)
+    
 
 
