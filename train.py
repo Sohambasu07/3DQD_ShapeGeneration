@@ -13,6 +13,8 @@ from tqdm import tqdm
 import wandb
 import logging
 from torchinfo import summary
+import matplotlib.pyplot as plt
+from PIL import Image
 
 # Training loop
 def train(model, train_dataloader, val_dataloader, 
@@ -104,6 +106,12 @@ def train(model, train_dataloader, val_dataloader,
                 writer.add_scalar('Commit loss/Train', avr_com_loss, iter_no)
                 writer.add_scalar('Regularization loss/Train', avr_reg_loss, iter_no)
                 writer.add_histogram("Codebook index hist", model.vq.codebook_hist, iter_no)
+                fig, ax = plt.subplots()
+                ax.bar(np.arange(len(model.vq.codebook_hist)), model.vq.codebook_hist.cpu())
+                tmp_file = 'histog.png'
+                fig.savefig(tmp_file, format='png')
+                codebook_hist =  np.asarray(Image.open(tmp_file))
+                writer.add_image('Codebook index hist', codebook_hist[:,:,:3], iter_no, dataformats="HWC")
 
                 wandb.log({'Codebook index hist': wandb.Histogram((model.vq.codebook_hist).cpu().numpy())})
 
