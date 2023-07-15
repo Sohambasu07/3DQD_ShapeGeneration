@@ -21,7 +21,7 @@ def train(model, train_dataloader, val_dataloader,
           criterion, learning_rate, optimizer, num_epoch=5, L1_lambda = 0.001, device='cuda'):
     
     logging.basicConfig(level=logging.INFO)
-    writer = SummaryWriter()
+    writer = SummaryWriter(comment='l2 vector quantizer')
 
     wandb.login()
 
@@ -109,6 +109,7 @@ def train(model, train_dataloader, val_dataloader,
                 ax.bar(np.arange(len(model.vq.codebook_hist)), model.vq.codebook_hist.cpu())
                 tmp_file = 'histog.png'
                 fig.savefig(tmp_file, format='png')
+                plt.close(fig)
                 codebook_hist =  np.asarray(Image.open(tmp_file))
                 writer.add_image('Codebook index hist', codebook_hist[:,:,:3], iter_no, dataformats="HWC")
 
