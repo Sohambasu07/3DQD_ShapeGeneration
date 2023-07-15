@@ -1,13 +1,19 @@
 import torch
 import torch.nn as nn
+from einops import rearrange
 
 
 class VectorQuantizer(nn.Module):
-    def __init__(self, n_embed=512, e_dim=256, beta=0.25):
+    def __init__(self, n_embed=512, e_dim=256, beta=0.25, codebook_dropout=False, codebook_dropout_prob=0.3):
         super().__init__()
         self.n_embed = n_embed
         self.e_dim = e_dim
         self.beta = beta
+        self.codebook_dropout = codebook_dropout
+        self.codebook_dropout_prob = codebook_dropout_prob
+
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.codebook_hist = torch.zeros(self.n_embed).to(self.device)
 
         self.codebook_hist = torch.zeros((self.n_embed)).to("cuda")
 
@@ -17,28 +23,35 @@ class VectorQuantizer(nn.Module):
     def forward(self, z):
         z_flattened = z.view(-1, self.e_dim)
 
-        # # distances from z to embeddings e_j (z - e)^2 = z^2 + e^2 - 2 e * z
-        # d = torch.sum(z_flattened ** 2, dim=1, keepdim=True) + \
-        #     torch.sum(self.embedding.weight ** 2, dim=1) - 2 * \
-        #     torch.einsum('bd,dn->bn', z_flattened, rearrange(self.embedding.weight, 'n d -> d n'))
+        if self.codebook_dropout:
+            # generate a random permutation of indices for the tensor
+            indices = torch.randperm(self.n_embed)
+
+            # select the first 70% of the indices
+            num_selected = int((1 - self.codebook_dropout_prob) * self.n_embed)
+            indices = indices[:num_selected]
+            embeddings = self.embedding(indices)
+        else:
+            # Get all embeddings
+            embeddings = self.embedding.weight
+
+        # # Calculate dot product similarity between z and embeddings
+        # similarity_old = torch.mm(z_flattened, embeddings.t())
+
+        # distances from z to embeddings e_j (z - e)^2 = z^2 + e^2 - 2 e * z
+        similarity = torch.sum(z_flattened ** 2, dim=1, keepdim=True) + \
+                     torch.sum(embeddings ** 2, dim=1) - 2 * \
+                     torch.einsum('bd,dn->bn', z_flattened, rearrange(embeddings, 'n d -> d n'))
         # Don't understand this in the paper implementation. Is this the correct way?
-
-        # Get all embeddings
-        indices = torch.arange(self.n_embed).to('cuda')
-        embeddings = self.embedding(indices)
-
-        # Calculate dot product similarity between z and embeddings
-        similarity = torch.mm(z_flattened, embeddings.t())
 
         codebook_idxs = torch.argmax(similarity, dim=-1)
         self.codebook_hist[codebook_idxs] += 1
         z_q = self.embedding(codebook_idxs).view(z.shape)
 
-        # Third term in the loss but implemented differently from what is in the paper
-        loss = self.beta * torch.mean((z_q.detach() - z) ** 2) + \
-               torch.mean((z_q - z.detach()) ** 2)
+        vq_loss = torch.mean((z_q - z.detach()) ** 2)
+        commitment_loss = self.beta * torch.mean((z_q.detach() - z) ** 2)
 
         # preserve gradients
         z_q = z + (z_q - z).detach()
 
-        return z_q, loss
+        return z_q, vq_loss, commitment_loss, codebook_idxs
