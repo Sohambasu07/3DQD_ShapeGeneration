@@ -20,16 +20,16 @@ class VectorQuantizer(nn.Module):
         # Create a lookup table with n_embed items, each of size e_dim
         self.embedding = nn.Embedding(self.n_embed, self.e_dim)
 
-    def forward(self, z):
+    def forward(self, z, is_training=True):
         z_flattened = z.view(-1, self.e_dim)
 
-        if self.codebook_dropout:
+        if self.codebook_dropout and is_training:
             # generate a random permutation of indices for the tensor
             indices = torch.randperm(self.n_embed)
 
             # select the first 70% of the indices
             num_selected = int((1 - self.codebook_dropout_prob) * self.n_embed)
-            indices = indices[:num_selected]
+            indices = indices[:num_selected].to("cuda")
             embeddings = self.embedding(indices)
         else:
             # Get all embeddings
@@ -45,8 +45,10 @@ class VectorQuantizer(nn.Module):
         # Don't understand this in the paper implementation. Is this the correct way?
 
         codebook_idxs = torch.argmax(similarity, dim=-1)
-        self.codebook_hist[codebook_idxs] += 1
         z_q = self.embedding(codebook_idxs).view(z.shape)
+
+        if is_training:
+            self.codebook_hist[codebook_idxs] += 1
 
         vq_loss = torch.mean((z_q - z.detach()) ** 2)
         commitment_loss = self.beta * torch.mean((z_q.detach() - z) ** 2)

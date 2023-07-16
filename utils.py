@@ -33,6 +33,25 @@ def display_tsdf(tsdf, mc_level=0.0):
     mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_normals=normals)
     mesh.show()
 
+def log_reconstructed_mesh(original_tsdf, rec_tsdf, tensorboard_writer, model_path, iter_no):
+    original_tsdf = original_tsdf.squeeze().squeeze()
+    original_tsdf = original_tsdf.cpu().numpy()
+    mc_level = (original_tsdf.max()+original_tsdf.min())/2.0
+    vertices, faces, normals, _ = skimage.measure.marching_cubes(original_tsdf, level=mc_level)
+    vertices = np.expand_dims(vertices, axis=0)
+    faces = np.expand_dims(faces, axis=0)
+    tensorboard_writer.add_mesh(model_path, vertices= vertices.copy(), faces=faces.copy(), global_step=iter_no)
+
+
+    rec_tsdf = rec_tsdf.squeeze().squeeze()
+    rec_tsdf = rec_tsdf.cpu().numpy()
+    mc_level = (rec_tsdf.max()+rec_tsdf.min())/2.0
+    vertices, faces, normals, _ = skimage.measure.marching_cubes(rec_tsdf, level=mc_level)
+    vertices = np.expand_dims(vertices, axis=0)
+    faces = np.expand_dims(faces, axis=0)
+    tensorboard_writer.add_mesh(model_path, vertices= vertices.copy(), faces=faces.copy(), global_step=iter_no+1)
+    # mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_normals=normals)
+
 
 if __name__ == '__main__':
     # test_x = torch.zeros((512, 1, 8, 8, 8))

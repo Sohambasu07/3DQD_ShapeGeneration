@@ -6,7 +6,7 @@ import os
 
 from tsdf_dataset import ShapeNet
 from model.pvqvae.vqvae import VQVAE
-from utils import shape2patch, patch2shape
+from utils import shape2patch, patch2shape, log_reconstructed_mesh
 from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 from tqdm import tqdm
@@ -18,10 +18,10 @@ from PIL import Image
 
 # Training loop
 def train(model, train_dataloader, val_dataloader, 
-          criterion, learning_rate, optimizer, num_epoch=5, L1_lambda = 0.001, device='cuda'):
+          criterion, learning_rate, optimizer, num_epoch=5, L1_lambda = 0.001, device='cuda', experiment_params=''):
     
     logging.basicConfig(level=logging.INFO)
-    writer = SummaryWriter(comment='l2 vector quantizer')
+    writer = SummaryWriter(comment=f'l2 vector quantizer-{experiment_params}-L1_lambda={L1_lambda}')
 
     wandb.login()
 
@@ -80,40 +80,34 @@ def train(model, train_dataloader, val_dataloader,
             total_loss = recon_loss + vq_loss + com_loss + L1_regloss
             total_loss.backward()  # Backpropagation
             optimizer.step()  # Update the weights
+            with torch.no_grad():
+                avr_tot_loss_buffer.append(total_loss.item())
+                avr_recon_loss_buffer.append(recon_loss.item())
+                avr_vq_loss_buffer.append(vq_loss.item())
+                avr_com_loss_buffer.append(com_loss.item())
+                avr_reg_loss_buffer.append(L1_regloss.item())
 
-            avr_tot_loss_buffer.append(total_loss.item())
-            avr_recon_loss_buffer.append(recon_loss.item())
-            avr_vq_loss_buffer.append(vq_loss.item())
-            avr_com_loss_buffer.append(com_loss.item())
-            avr_reg_loss_buffer.append(L1_regloss.item())
+                iter_no = epoch * len(train_dataloader) + batch_idx
+                avr_tot_loss = np.mean(avr_tot_loss_buffer)
+                avr_recon_loss = np.mean(avr_recon_loss_buffer)
+                avr_vq_loss = np.mean(avr_vq_loss_buffer)
+                avr_com_loss = np.mean(avr_com_loss_buffer)
+                avr_reg_loss = np.mean(avr_reg_loss_buffer)
 
-            iter_no = epoch * len(train_dataloader) + batch_idx
-            avr_tot_loss = np.mean(avr_tot_loss_buffer)
-            avr_recon_loss = np.mean(avr_recon_loss_buffer)
-            avr_vq_loss = np.mean(avr_vq_loss_buffer)
-            avr_com_loss = np.mean(avr_com_loss_buffer)
-            avr_reg_loss = np.mean(avr_reg_loss_buffer)
+                if batch_idx  % 50 == 0:
+                #     iter_no = epoch * len(data_loader) + batch_idx
+                #     avr_tot_loss = np.mean(avr_tot_loss_buffer)
+                #     avr_recon_loss = np.mean(avr_recon_loss_buffer)
+                #     avr_vq_loss = np.mean(avr_vq_loss_buffer)
+                #     print(f"Epoch {epoch}/{num_epoch} - Batch {batch_idx}/{len(dataloader)} Total Loss: {avr_tot_loss} Recon Loss: {avr_recon_loss}, Vq Loss: {avr_vq_loss}")
+                    writer.add_scalar('Total loss/Train', avr_tot_loss, iter_no)
+                    writer.add_scalar('Recon loss/Train', avr_recon_loss, iter_no)
+                    writer.add_scalar('VQ loss/Train', avr_vq_loss, iter_no)
+                    writer.add_scalar('Commit loss/Train', avr_com_loss, iter_no)
+                    writer.add_scalar('Regularization loss/Train', avr_reg_loss, iter_no)
+                    log_codebook_idx_histogram(model, writer, iter_no)
 
-            if batch_idx % 50 == 0:
-            #     iter_no = epoch * len(data_loader) + batch_idx
-            #     avr_tot_loss = np.mean(avr_tot_loss_buffer)
-            #     avr_recon_loss = np.mean(avr_recon_loss_buffer)
-            #     avr_vq_loss = np.mean(avr_vq_loss_buffer)
-            #     print(f"Epoch {epoch}/{num_epoch} - Batch {batch_idx}/{len(dataloader)} Total Loss: {avr_tot_loss} Recon Loss: {avr_recon_loss}, Vq Loss: {avr_vq_loss}")
-                writer.add_scalar('Total loss/Train', avr_tot_loss, iter_no)
-                writer.add_scalar('Recon loss/Train', avr_recon_loss, iter_no)
-                writer.add_scalar('VQ loss/Train', avr_vq_loss, iter_no)
-                writer.add_scalar('Commit loss/Train', avr_com_loss, iter_no)
-                writer.add_scalar('Regularization loss/Train', avr_reg_loss, iter_no)
-                fig, ax = plt.subplots()
-                ax.bar(np.arange(len(model.vq.codebook_hist)), model.vq.codebook_hist.cpu())
-                tmp_file = 'histog.png'
-                fig.savefig(tmp_file, format='png')
-                plt.close(fig)
-                codebook_hist =  np.asarray(Image.open(tmp_file))
-                writer.add_image('Codebook index hist', codebook_hist[:,:,:3], iter_no, dataformats="HWC")
-
-                wandb.log({'Codebook index hist': wandb.Histogram((model.vq.codebook_hist).cpu().numpy())})
+                    wandb.log({'Codebook index hist': wandb.Histogram((model.vq.codebook_hist).cpu().numpy())})
 
             wandb.log({"Total loss/Train": avr_tot_loss, 
                        "Recon loss/Train": avr_recon_loss, 
@@ -124,6 +118,8 @@ def train(model, train_dataloader, val_dataloader,
             tqdm_dataloader.set_postfix_str("Total Loss: {:.4f}, Recon Loss: {:.4f}, Vq Loss: {:.4f}, Commit Loss: {:.4f}, Reg Loss: {:.4f}"\
                                             .format(avr_tot_loss, avr_recon_loss, 
                                             avr_vq_loss, avr_com_loss, avr_reg_loss))
+        with torch.no_grad():
+            log_reconstructed_mesh(tsdf, reconstructed_data, writer, model_path, epoch)
         
         print()
         
@@ -146,7 +142,7 @@ def train(model, train_dataloader, val_dataloader,
             tsdf = torch.reshape(tsdf, (1, 1, *tsdf.shape))
             patched_tsdf = shape2patch(tsdf)
             with torch.no_grad():
-                patched_recon_data, val_vq_loss, val_com_loss = model(patched_tsdf)
+                patched_recon_data, val_vq_loss, val_com_loss = model(patched_tsdf, is_training=False)
                 reconstructed_data = patch2shape(patched_recon_data)
                 val_recon_loss = criterion(reconstructed_data, tsdf)
             val_total_loss = val_recon_loss + val_vq_loss + val_com_loss
@@ -161,15 +157,14 @@ def train(model, train_dataloader, val_dataloader,
             val_avr_vq_loss = np.mean(val_vq_loss_buffer)
             val_avr_com_loss = np.mean(val_com_loss_buffer)
 
-            writer.add_scalar('Total loss/Val', val_avr_tot_loss, epoch)
-            writer.add_scalar('Recon loss/Val', val_avr_recon_loss, epoch)
-            writer.add_scalar('VQ loss/Val', val_avr_vq_loss, epoch)
-            writer.add_scalar('Commit loss/Val', val_avr_com_loss, epoch)
-
             vtqdm_dataloader.set_postfix_str("Val Total Loss: {:.4f}, Val Recon Loss: {:.4f}, Val Vq Loss: {:.4f}, Commit Loss: {:.4f}"\
                                              .format(val_avr_tot_loss, val_avr_recon_loss, 
                                                      val_avr_vq_loss, val_avr_com_loss))
             
+        writer.add_scalar('Total loss/Val', val_avr_tot_loss, epoch)
+        writer.add_scalar('Recon loss/Val', val_avr_recon_loss, epoch)
+        writer.add_scalar('VQ loss/Val', val_avr_vq_loss, epoch)
+        writer.add_scalar('Commit loss/Val', val_avr_com_loss, epoch)    
         wandb.log({"Total loss/Val": val_avr_tot_loss, 
                    "Recon loss/Val": val_avr_recon_loss, 
                    "VQ loss/Val": val_avr_vq_loss,
@@ -188,6 +183,15 @@ def train(model, train_dataloader, val_dataloader,
             logging.info(val_loss_bench)
 
     writer.close()
+
+def log_codebook_idx_histogram(model, writer, iter_no):
+    fig, ax = plt.subplots()
+    ax.bar(np.arange(len(model.vq.codebook_hist)), model.vq.codebook_hist.cpu())
+    tmp_file = 'histog.png'
+    fig.savefig(tmp_file, format='png')
+    plt.close(fig)
+    codebook_hist =  np.asarray(Image.open(tmp_file))
+    writer.add_image('Codebook index hist', codebook_hist[:,:,:3], iter_no, dataformats="HWC")
 
 if __name__ == '__main__':
     shapenet_dataset = ShapeNet(r'./dataset',
@@ -218,9 +222,12 @@ if __name__ == '__main__':
 
     # Create model object
     embed_dim = 256
-    num_embed = 128
-    model = VQVAE(embed_dim, num_embed).to(device)
-    summary(model, input_size=(512, 1, 8, 8, 8))
+    num_embed = 32
+    codebook_dropout = True
+    codebook_dropout_prob = 0.3
+    experiment_params = f'embed_dim={embed_dim}-num_embe={num_embed}-vq_drop={codebook_dropout}={codebook_dropout_prob}'
+    model = VQVAE(embed_dim, num_embed, codebook_dropout=codebook_dropout, codebook_dropout_prob=codebook_dropout_prob).to(device)
+    # summary(model, input_size=(512, 1, 8, 8, 8))
     # x_head, vq_loss = model(tsdf)
 
     # Set Hyperparameters
@@ -228,7 +235,7 @@ if __name__ == '__main__':
     learning_rate = 0.001
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     epoch = 5
-    L1_lambda = 0.001
+    L1_lambda = 0.01
 
     train(model, train_dataloader=train_loader, 
                  val_dataloader=val_loader, 
@@ -237,5 +244,6 @@ if __name__ == '__main__':
                  optimizer=optimizer, 
                  num_epoch=epoch,
                  L1_lambda=L1_lambda, 
-                 device=device)
+                 device=device,
+                 experiment_params=experiment_params)
     

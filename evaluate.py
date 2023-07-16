@@ -28,7 +28,7 @@ def evaluate(test_dataloader, model, criterion, device='cuda'):
         tsdf = torch.reshape(tsdf, (1, 1, *tsdf.shape))
         patched_tsdf = shape2patch(tsdf)
         with torch.no_grad():
-            patch_recon_data, test_vq_loss, test_com_loss = model(patched_tsdf)
+            patch_recon_data, test_vq_loss, test_com_loss = model(patched_tsdf, is_training=False)
             reconstructed_data = patch2shape(patch_recon_data)
             test_recon_loss = criterion(reconstructed_data, tsdf)
 
@@ -53,7 +53,11 @@ def evaluate(test_dataloader, model, criterion, device='cuda'):
             rec_data = rec_data.squeeze().squeeze()
             print(rec_data.min(), rec_data.max())
             rec_data = rec_data.cpu()
-            display_tsdf(rec_data, mc_level=0.1200)#(rec_data.max()+rec_data.min())/2.0)
+            print((rec_data.max()+rec_data.min())/2.0)
+            display_tsdf(rec_data, mc_level=(rec_data.max()+rec_data.min())/2.0)#(rec_data.max()+rec_data.min())/2.0)
+        
+        # print(model.vq.codebook_hist)
+
 
         
 
@@ -80,7 +84,7 @@ if __name__ == '__main__':
 
     # Create model object
     embed_dim = 256
-    num_embed = 128
+    num_embed = 16
     model = VQVAE(embed_dim, num_embed).to(device)
 
     # Load model
