@@ -44,7 +44,8 @@ def log_reconstructed_mesh(original_tsdf, rec_tsdf, tensorboard_writer, model_pa
     faces = np.expand_dims(faces, axis=0)
     tensorboard_writer.add_mesh(model_path, vertices= vertices.copy(), faces=faces.copy(), global_step=iter_no)
     mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_normals=normals)
-    wandb.log({model_path: wandb.Object3D(mesh)})
+    obj = trimesh.exchange.obj.export_obj(mesh)
+    wandb.log({model_path: wandb.Object3D(obj)})
 
 
     rec_tsdf = rec_tsdf.squeeze().squeeze()
