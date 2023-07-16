@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import os
+import argparse
 
 from tsdf_dataset import ShapeNet
 from model.pvqvae.vqvae import VQVAE
@@ -94,7 +95,7 @@ def train(model, train_dataloader, val_dataloader,
                 avr_com_loss = np.mean(avr_com_loss_buffer)
                 avr_reg_loss = np.mean(avr_reg_loss_buffer)
 
-                if batch_idx  % 50 == 0:
+                if batch_idx  % 100 == 0:
                 #     iter_no = epoch * len(data_loader) + batch_idx
                 #     avr_tot_loss = np.mean(avr_tot_loss_buffer)
                 #     avr_recon_loss = np.mean(avr_recon_loss_buffer)
@@ -107,7 +108,7 @@ def train(model, train_dataloader, val_dataloader,
                     writer.add_scalar('Regularization loss/Train', avr_reg_loss, iter_no)
                     log_codebook_idx_histogram(model, writer, iter_no)
 
-                    wandb.log({'Codebook index hist': wandb.Histogram((model.vq.codebook_hist).cpu().numpy())})
+                    # wandb.log({'Codebook index hist': wandb.Histogram((model.vq.codebook_hist).cpu().numpy())})
 
             wandb.log({"Total loss/Train": avr_tot_loss, 
                        "Recon loss/Train": avr_recon_loss, 
@@ -192,9 +193,24 @@ def log_codebook_idx_histogram(model, writer, iter_no):
     plt.close(fig)
     codebook_hist =  np.asarray(Image.open(tmp_file))
     writer.add_image('Codebook index hist', codebook_hist[:,:,:3], iter_no, dataformats="HWC")
+    wandb.log({'Codebook index hist': wandb.Image(codebook_hist[:,:,:3])})
 
 if __name__ == '__main__':
-    shapenet_dataset = ShapeNet(r'./dataset',
+
+    parser = argparse.ArgumentParser(description='Train a PVQVAE model')
+    parser.add_argument('--dataset_path', type=str, default='./dataset', help='Path to the dataset')
+    parser.add_argument('--embed_dim', type=int, default=256, help='Embedding dimension')
+    parser.add_argument('--num_embed', type=int, default=128, help='Number of embeddings')
+    parser.add_argument('--codebook_dropout', type=bool, default=False, help='Whether to use codebook dropout')
+    parser.add_argument('--codebook_dropout_prob', type=float, default=0.3, help='Codebook dropout probability')
+    parser.add_argument('--learning_rate', type=float, default=0.001, help='Learning rate')
+    parser.add_argument('--num_epoch', type=int, default=5, help='Number of epochs')
+    parser.add_argument('--L1_lambda', type=float, default=0.01, help='L1 regularization lambda')
+
+    args = parser.parse_args()
+
+
+    shapenet_dataset = ShapeNet(dataset_dir=args.dataset_path,
                                 split_ratio={'train': 0.8, 'val': 0.1, 'test': 0.1})    
     train_dataset, val_dataset, test_dataset = shapenet_dataset.split_dataset()
 
@@ -221,10 +237,10 @@ if __name__ == '__main__':
     print("Device: ", device)
 
     # Create model object
-    embed_dim = 256
-    num_embed = 32
-    codebook_dropout = True
-    codebook_dropout_prob = 0.3
+    embed_dim = args.embed_dim
+    num_embed = args.num_embed
+    codebook_dropout = args.codebook_dropout
+    codebook_dropout_prob = args.codebook_dropout_prob
     experiment_params = f'embed_dim={embed_dim}-num_embe={num_embed}-vq_drop={codebook_dropout}={codebook_dropout_prob}'
     model = VQVAE(embed_dim, num_embed, codebook_dropout=codebook_dropout, codebook_dropout_prob=codebook_dropout_prob).to(device)
     # summary(model, input_size=(512, 1, 8, 8, 8))
@@ -232,10 +248,10 @@ if __name__ == '__main__':
 
     # Set Hyperparameters
     criterion = nn.MSELoss()
-    learning_rate = 0.001
+    learning_rate = args.learning_rate
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    epoch = 5
-    L1_lambda = 0.01
+    epoch = args.num_epoch
+    L1_lambda = args.L1_lambda
 
     train(model, train_dataloader=train_loader, 
                  val_dataloader=val_loader, 
