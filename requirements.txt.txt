@@ -7,3 +7,4 @@ matplotlib
 einops
 wandb
 skimage
+tqdm
