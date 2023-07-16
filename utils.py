@@ -3,6 +3,7 @@ import torch
 import trimesh
 import skimage
 import pickle
+import argparse
 
 def shape2patch(x, patch_size=8, stride=8):
         #x shape (1, 1, 64, 64, 64)
@@ -54,10 +55,17 @@ def log_reconstructed_mesh(original_tsdf, rec_tsdf, tensorboard_writer, model_pa
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Utils')
+    parser.add_argument('--dataset_path', type=str, default='./dataset', help='Path to dataset')
+    
+    args = parser.parse_args()
+
     # test_x = torch.zeros((512, 1, 8, 8, 8))
     # test_x = torch.randn((1, 1, 64, 64, 64))
     #load a saved tsdf file and display to verify
-    with open('dataset/plane/plane_1.pkl', 'rb') as f:
+    file_path = args.dataset_path + '/plane/plane_3.pkl'
+
+    with open(file_path, 'rb') as f:
         tsdf_sample = pickle.load(f)
 
     test_x= tsdf_sample['tsdf']

@@ -5,6 +5,7 @@ from torch.utils.data import Dataset, DataLoader, Subset
 from tqdm import tqdm
 from tsdf_dataset import ShapeNet
 from model.pvqvae.vqvae import VQVAE
+import argparse
 
 from utils import shape2patch, patch2shape, display_tsdf
 
@@ -63,8 +64,16 @@ def evaluate(test_dataloader, model, criterion, device='cuda'):
 
 if __name__ == '__main__':
 
+    parser = argparse.ArgumentParser(description='Evaluate PVQVAE')
+    parser.add_argument('--dataset_path', type=str, default='./dataset', help='Path to dataset')
+    parser.add_argument('--model_path', type=str, default='./best_model.pth', help='Path to model')
+    parser.add_argument('--embed_dim', type=int, default=256, help='Embedding dimension')
+    parser.add_argument('--num_embed', type=int, default=128, help='Number of embeddings')
+
+    args = parser.parse_args()
+
     # Load test dataset
-    shapenet_dataset = ShapeNet(r'./dataset', split={'train': False, 'val': False, 'test': True},
+    shapenet_dataset = ShapeNet(dataset_dir=args.dataset_path, split={'train': False, 'val': False, 'test': True},
                                 split_ratio={'train': 0.8, 'val': 0.1, 'test': 0.1})
 
     test_paths = []
@@ -83,12 +92,12 @@ if __name__ == '__main__':
     print("Device: ", device)
 
     # Create model object
-    embed_dim = 256
-    num_embed = 16
+    embed_dim = args.embed_dim
+    num_embed = args.num_embed
     model = VQVAE(embed_dim, num_embed).to(device)
 
     # Load model
-    model.load_state_dict(torch.load('./best_model.pth'))
+    model.load_state_dict(torch.load(args.model_path))
     model.to(device)
 
     # Load criterion
