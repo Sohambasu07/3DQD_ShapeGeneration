@@ -6,5 +6,7 @@ rtree
 matplotlib
 einops
 wandb
-skimage
+scikit-image
+tensorboard
 tqdm
+torchinfo
