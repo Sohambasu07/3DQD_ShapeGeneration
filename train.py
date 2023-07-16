@@ -95,7 +95,7 @@ def train(model, train_dataloader, val_dataloader,
                 avr_com_loss = np.mean(avr_com_loss_buffer)
                 avr_reg_loss = np.mean(avr_reg_loss_buffer)
 
-                if batch_idx  % 50 == 0:
+                if batch_idx  % 100 == 0:
                 #     iter_no = epoch * len(data_loader) + batch_idx
                 #     avr_tot_loss = np.mean(avr_tot_loss_buffer)
                 #     avr_recon_loss = np.mean(avr_recon_loss_buffer)
