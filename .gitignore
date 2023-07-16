@@ -6,3 +6,4 @@ wandb/
 .DS_Store
 best_model.pth
 final_model.pth
+new_env/
