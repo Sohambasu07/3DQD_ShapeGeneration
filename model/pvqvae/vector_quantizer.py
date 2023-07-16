@@ -15,8 +15,6 @@ class VectorQuantizer(nn.Module):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.codebook_hist = torch.zeros(self.n_embed).to(self.device)
 
-        self.codebook_hist = torch.zeros((self.n_embed)).to("cuda")
-
         # Create a lookup table with n_embed items, each of size e_dim
         self.embedding = nn.Embedding(self.n_embed, self.e_dim)
 
@@ -29,7 +27,7 @@ class VectorQuantizer(nn.Module):
 
             # select the first 70% of the indices
             num_selected = int((1 - self.codebook_dropout_prob) * self.n_embed)
-            indices = indices[:num_selected].to("cuda")
+            indices, _ = torch.sort(indices[:num_selected])
             embeddings = self.embedding(indices)
         else:
             # Get all embeddings
