@@ -24,21 +24,21 @@ def train(model, train_dataloader, val_dataloader,
     logging.basicConfig(level=logging.INFO)
     writer = SummaryWriter(comment=f'l2 vector quantizer-{experiment_params}-L1_lambda={L1_lambda}')
 
-    wandb.login()
+    # wandb.login()
 
-    wandb.init(
-        # set the wandb project where this run will be logged
-        project="3dqd-pvqvae",
+    # wandb.init(
+    #     # set the wandb project where this run will be logged
+    #     project="3dqd-pvqvae",
         
-        # track hyperparameters and run metadata
-        config={
-        "learning_rate": learning_rate,
-        "architecture": "PVQVAE",
-        "dataset": "ShapeNetv2",
-        "optimizer": optimizer.__class__.__name__,
-        "epochs": num_epoch,
-        }
-    )
+    #     # track hyperparameters and run metadata
+    #     config={
+    #     "learning_rate": learning_rate,
+    #     "architecture": "PVQVAE",
+    #     "dataset": "ShapeNetv2",
+    #     "optimizer": optimizer.__class__.__name__,
+    #     "epochs": num_epoch,
+    #     }
+    # )
 
     logging.info("Starting training")
 
@@ -106,15 +106,15 @@ def train(model, train_dataloader, val_dataloader,
                     writer.add_scalar('VQ loss/Train', avr_vq_loss, iter_no)
                     writer.add_scalar('Commit loss/Train', avr_com_loss, iter_no)
                     writer.add_scalar('Regularization loss/Train', avr_reg_loss, iter_no)
-                    log_codebook_idx_histogram(model, writer, iter_no)
+                    # log_codebook_idx_histogram(model, writer, iter_no)
 
                     # wandb.log({'Codebook index hist': wandb.Histogram((model.vq.codebook_hist).cpu().numpy())})
 
-            wandb.log({"Total loss/Train": avr_tot_loss, 
-                       "Recon loss/Train": avr_recon_loss, 
-                       "VQ loss/Train": avr_vq_loss,
-                       "Commit loss/Train": avr_com_loss,
-                       "Regularization loss/Train": avr_reg_loss})
+            # wandb.log({"Total loss/Train": avr_tot_loss, 
+            #            "Recon loss/Train": avr_recon_loss, 
+            #            "VQ loss/Train": avr_vq_loss,
+            #            "Commit loss/Train": avr_com_loss,
+            #            "Regularization loss/Train": avr_reg_loss})
             
             tqdm_dataloader.set_postfix_str("Total Loss: {:.4f}, Recon Loss: {:.4f}, Vq Loss: {:.4f}, Commit Loss: {:.4f}, Reg Loss: {:.4f}"\
                                             .format(avr_tot_loss, avr_recon_loss, 
@@ -166,10 +166,10 @@ def train(model, train_dataloader, val_dataloader,
         writer.add_scalar('Recon loss/Val', val_avr_recon_loss, epoch)
         writer.add_scalar('VQ loss/Val', val_avr_vq_loss, epoch)
         writer.add_scalar('Commit loss/Val', val_avr_com_loss, epoch)    
-        wandb.log({"Total loss/Val": val_avr_tot_loss, 
-                   "Recon loss/Val": val_avr_recon_loss, 
-                   "VQ loss/Val": val_avr_vq_loss,
-                   "Commit loss/Val": val_avr_com_loss})
+        # wandb.log({"Total loss/Val": val_avr_tot_loss, 
+        #            "Recon loss/Val": val_avr_recon_loss, 
+        #            "VQ loss/Val": val_avr_vq_loss,
+        #            "Commit loss/Val": val_avr_com_loss})
 
         torch.save(model.state_dict(), './final_model.pth')
         logging.info("Model saved")
@@ -193,14 +193,14 @@ def log_codebook_idx_histogram(model, writer, iter_no):
     plt.close(fig)
     codebook_hist =  np.asarray(Image.open(tmp_file))
     writer.add_image('Codebook index hist', codebook_hist[:,:,:3], iter_no, dataformats="HWC")
-    wandb.log({'Codebook index hist': wandb.Image(codebook_hist[:,:,:3])})
+    # wandb.log({'Codebook index hist': wandb.Image(codebook_hist[:,:,:3])})
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Train a PVQVAE model')
     parser.add_argument('--dataset_path', type=str, default='./dataset', help='Path to the dataset')
-    parser.add_argument('--embed_dim', type=int, default=256, help='Embedding dimension')
     parser.add_argument('--num_embed', type=int, default=128, help='Number of embeddings')
+    parser.add_argument('--embed_dim', type=int, default=256, help='Embedding dimension')
     parser.add_argument('--codebook_dropout', type=bool, default=False, help='Whether to use codebook dropout')
     parser.add_argument('--codebook_dropout_prob', type=float, default=0.3, help='Codebook dropout probability')
     parser.add_argument('--learning_rate', type=float, default=0.001, help='Learning rate')
@@ -237,13 +237,13 @@ if __name__ == '__main__':
     print("Device: ", device)
 
     # Create model object
-    embed_dim = args.embed_dim
     num_embed = args.num_embed
+    embed_dim = args.embed_dim
     codebook_dropout = args.codebook_dropout
     codebook_dropout_prob = args.codebook_dropout_prob
-    experiment_params = f'embed_dim={embed_dim}-num_embe={num_embed}-vq_drop={codebook_dropout}={codebook_dropout_prob}'
-    model = VQVAE(embed_dim, num_embed, codebook_dropout=codebook_dropout, codebook_dropout_prob=codebook_dropout_prob).to(device)
-    # summary(model, input_size=(512, 1, 8, 8, 8))
+    experiment_params = f'num_embe={num_embed}-embed_dim={embed_dim}-vq_drop={codebook_dropout}={codebook_dropout_prob}'
+    model = VQVAE(num_embeddings=num_embed, embed_dim=embed_dim, codebook_dropout=codebook_dropout, codebook_dropout_prob=codebook_dropout_prob).to(device)
+    summary(model, input_size=(512, 1, 8, 8, 8))
     # x_head, vq_loss = model(tsdf)
 
     # Set Hyperparameters

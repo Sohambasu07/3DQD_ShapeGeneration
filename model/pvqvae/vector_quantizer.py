@@ -20,6 +20,7 @@ class VectorQuantizer(nn.Module):
 
     def forward(self, z, is_training=True):
         z_flattened = z.view(-1, self.e_dim)
+        # print(z_flattened.shape)
 
         if self.codebook_dropout and is_training:
             # generate a random permutation of indices for the tensor

@@ -7,7 +7,7 @@ from model.pvqvae.vector_quantizer import VectorQuantizer
 from utils import shape2patch
 
 class VQVAE(nn.Module):
-    def __init__(self, embed_dim, num_embeddings, codebook_dropout=False, codebook_dropout_prob=0.3,  *args, **kwargs):
+    def __init__(self, num_embeddings, embed_dim, codebook_dropout=False, codebook_dropout_prob=0.3,  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.encoder = Encoder3D(in_channels=1)
         self.decoder = Decoder3D()
