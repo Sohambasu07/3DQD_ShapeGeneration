@@ -106,7 +106,7 @@ def train(model, train_dataloader, val_dataloader,
                     writer.add_scalar('VQ loss/Train', avr_vq_loss, iter_no)
                     writer.add_scalar('Commit loss/Train', avr_com_loss, iter_no)
                     writer.add_scalar('Regularization loss/Train', avr_reg_loss, iter_no)
-                    # log_codebook_idx_histogram(model, writer, iter_no)
+                    log_codebook_idx_histogram(model, writer, iter_no)
 
                     # wandb.log({'Codebook index hist': wandb.Histogram((model.vq.codebook_hist).cpu().numpy())})
 
