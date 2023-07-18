@@ -12,7 +12,7 @@ from utils import shape2patch, patch2shape, display_tsdf
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Inference PVQVAE')
-    parser.add_argument('--mesh_path', type=str, default='./dataset/chair/chair_71.pkl', help='path to input mesh')
+    parser.add_argument('--mesh_path', type=str, default='./dataset/chair/chair_3.pkl', help='path to input mesh')
     parser.add_argument('--model_path', type=str, default='./best_model.pth', help='Path to model')
 
 
@@ -28,7 +28,7 @@ if __name__ == '__main__':
     print("Device: ", device)
     embed_dim = 256
     num_embed = 128
-    model = VQVAE(embed_dim, num_embed).to(device)
+    model = VQVAE(num_embed, embed_dim).to(device)
 
     # Load model
     model.load_state_dict(torch.load(args.model_path))
@@ -40,8 +40,7 @@ if __name__ == '__main__':
     patched_tsdf = shape2patch(input_tsdf)
 
     with torch.no_grad():
-        patch_recon_data, test_vq_loss, test_com_loss = model(patched_tsdf, is_training=False)
-        reconstructed_data = patch2shape(patch_recon_data)
+        reconstructed_data, test_vq_loss, test_com_loss = model(patched_tsdf, is_training=False)
         test_recon_loss = torch.mean((reconstructed_data - tsdf) ** 2)
         print(f'{test_recon_loss=}')
         print(input_tsdf.shape)

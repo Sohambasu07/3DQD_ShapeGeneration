@@ -5,6 +5,7 @@ import skimage
 import pickle
 import argparse
 import wandb
+from einops import rearrange
 
 def shape2patch(x, patch_size=8, stride=8):
         #x shape (1, 1, 64, 64, 64)
@@ -29,6 +30,12 @@ def patch2shape(x_head, patch_size=8, output_size=64):
     folded_x_head = torch.unsqueeze(torch.unsqueeze(folded_x_head, dim=0), dim=0)
     return folded_x_head
 
+def fold_to_voxels(x_cubes, batch_size, ncubes_per_dim):
+    x = rearrange(x_cubes, '(b p) c d h w -> b p c d h w', b=batch_size) 
+    x = rearrange(x, 'b (p1 p2 p3) c d h w -> b c (p1 d) (p2 h) (p3 w)',
+                    p1=ncubes_per_dim, p2=ncubes_per_dim, p3=ncubes_per_dim)
+    return x
+
 def display_tsdf(tsdf, mc_level=0.0):
     tsdf = tsdf.numpy()
     vertices, faces, normals, _ = skimage.measure.marching_cubes(tsdf, level=mc_level)
@@ -43,9 +50,9 @@ def log_reconstructed_mesh(original_tsdf, rec_tsdf, tensorboard_writer, model_pa
     vertices = np.expand_dims(vertices, axis=0)
     faces = np.expand_dims(faces, axis=0)
     tensorboard_writer.add_mesh(model_path, vertices= vertices.copy(), faces=faces.copy(), global_step=iter_no)
-    mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_normals=normals)
-    obj = trimesh.exchange.obj.export_obj(mesh)
-    wandb.log({model_path: wandb.Object3D(obj)})
+    # mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_normals=normals)
+    # obj = trimesh.exchange.obj.export_obj(mesh)
+    # wandb.log({model_path: wandb.Object3D(obj)})
 
 
     rec_tsdf = rec_tsdf.squeeze().squeeze()

@@ -53,6 +53,10 @@ class VectorQuantizer(nn.Module):
         commitment_loss = self.beta * torch.mean((z_q.detach() - z) ** 2)
 
         # preserve gradients
-        z_q = z + (z_q - z).detach()
+        # z_q = z + (z_q - z).detach()
+
+        if is_training:
+            noise = torch.rand_like(z_q)
+            z_q = z + torch.norm(z - z_q)*noise/torch.norm(noise)
 
         return z_q, vq_loss, commitment_loss, codebook_idxs

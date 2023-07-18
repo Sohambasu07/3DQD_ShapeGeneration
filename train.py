@@ -22,7 +22,7 @@ def train(model, train_dataloader, val_dataloader,
           criterion, learning_rate, optimizer, num_epoch=5, L1_lambda = 0.001, device='cuda', experiment_params=''):
     
     logging.basicConfig(level=logging.INFO)
-    writer = SummaryWriter(comment=f'l2 vector quantizer-{experiment_params}-L1_lambda={L1_lambda}')
+    writer = SummaryWriter(comment=f'nsvq-{experiment_params}-L1_lambda={L1_lambda}')
 
     # wandb.login()
 
@@ -66,8 +66,8 @@ def train(model, train_dataloader, val_dataloader,
             tsdf = tsdf.to(device)
             tsdf = torch.reshape(tsdf, (1, 1, *tsdf.shape))
             patched_tsdf = shape2patch(tsdf)
-            patched_recon_data, vq_loss, com_loss = model(patched_tsdf)  # Forward pass
-            reconstructed_data = patch2shape(patched_recon_data)
+            reconstructed_data, vq_loss, com_loss = model(patched_tsdf)  # Forward pass
+            # reconstructed_data = patch2shape(patched_recon_data)
             recon_loss = criterion(reconstructed_data, tsdf)  # Compute the loss
 
             # Adding regularization
@@ -78,7 +78,7 @@ def train(model, train_dataloader, val_dataloader,
                 L1_regloss += L1_penalty(param, torch.zeros_like(param))
             L1_regloss = L1_lambda * L1_regloss
 
-            total_loss = recon_loss + vq_loss + com_loss + L1_regloss
+            total_loss = recon_loss + L1_regloss
             total_loss.backward()  # Backpropagation
             optimizer.step()  # Update the weights
             with torch.no_grad():
@@ -143,8 +143,7 @@ def train(model, train_dataloader, val_dataloader,
             tsdf = torch.reshape(tsdf, (1, 1, *tsdf.shape))
             patched_tsdf = shape2patch(tsdf)
             with torch.no_grad():
-                patched_recon_data, val_vq_loss, val_com_loss = model(patched_tsdf, is_training=False)
-                reconstructed_data = patch2shape(patched_recon_data)
+                reconstructed_data, val_vq_loss, val_com_loss = model(patched_tsdf, is_training=False)
                 val_recon_loss = criterion(reconstructed_data, tsdf)
             val_total_loss = val_recon_loss + val_vq_loss + val_com_loss
 
@@ -204,7 +203,7 @@ if __name__ == '__main__':
     parser.add_argument('--codebook_dropout', type=bool, default=False, help='Whether to use codebook dropout')
     parser.add_argument('--codebook_dropout_prob', type=float, default=0.3, help='Codebook dropout probability')
     parser.add_argument('--learning_rate', type=float, default=0.001, help='Learning rate')
-    parser.add_argument('--num_epoch', type=int, default=5, help='Number of epochs')
+    parser.add_argument('--num_epoch', type=int, default=10, help='Number of epochs')
     parser.add_argument('--L1_lambda', type=float, default=0.01, help='L1 regularization lambda')
 
     args = parser.parse_args()
