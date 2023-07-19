@@ -49,7 +49,7 @@ class VectorQuantizer(nn.Module):
                      torch.einsum('bd,dn->bn', z_flattened, rearrange(embeddings, 'n d -> d n'))
         # Don't understand this in the paper implementation. Is this the correct way?
 
-        codebook_idxs = torch.argmax(similarity, dim=-1)
+        codebook_idxs = torch.argmin(similarity, dim=-1)
         # print(codebook_idxs.shape)
         # print(codebook_idxs)
         z_q = self.embedding(codebook_idxs).view(z.shape)
