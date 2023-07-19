@@ -42,6 +42,8 @@ def train(model, train_dataloader, val_dataloader,
     #     }
     # )
 
+    agg_codebook_hist = torch.zeros(model.vq.n_embed).cpu()
+
     logging.info("Starting training")
 
     val_loss_bench = 100000.0
@@ -60,9 +62,12 @@ def train(model, train_dataloader, val_dataloader,
 
         tqdm_dataloader = tqdm(train_dataloader)
         for batch_idx, tsdf_sample in enumerate(tqdm_dataloader):
+
+            # Replacing codebook entries
             if batch_idx != 0 and batch_idx % replace_batches == 0:
                 model.vq.replace_codebook_entries()
-                # logging.info("Codebook entries replaced")
+            #     # logging.info("Codebook entries replaced")
+
             model_path = tsdf_sample[1][0]
             tsdf = tsdf_sample[0][0]
 
@@ -100,7 +105,7 @@ def train(model, train_dataloader, val_dataloader,
                 avr_com_loss = np.mean(avr_com_loss_buffer)
                 avr_reg_loss = np.mean(avr_reg_loss_buffer)
 
-                if batch_idx  % 100 == 0:
+                if batch_idx  % 50 == 0:
                 #     iter_no = epoch * len(data_loader) + batch_idx
                 #     avr_tot_loss = np.mean(avr_tot_loss_buffer)
                 #     avr_recon_loss = np.mean(avr_recon_loss_buffer)
@@ -111,7 +116,7 @@ def train(model, train_dataloader, val_dataloader,
                     writer.add_scalar('VQ loss/Train', avr_vq_loss, iter_no)
                     writer.add_scalar('Commit loss/Train', avr_com_loss, iter_no)
                     writer.add_scalar('Regularization loss/Train', avr_reg_loss, iter_no)
-                    log_codebook_idx_histogram(model, writer, iter_no)
+                    agg_codebook_hist = log_codebook_idx_histogram(model, writer, iter_no, agg_codebook_hist)
 
                     # wandb.log({'Codebook index hist': wandb.Histogram((model.vq.codebook_hist).cpu().numpy())})
 
@@ -189,15 +194,18 @@ def train(model, train_dataloader, val_dataloader,
 
     writer.close()
 
-def log_codebook_idx_histogram(model, writer, iter_no):
+def log_codebook_idx_histogram(model, writer, iter_no, agg_codebook_hist):
     fig, ax = plt.subplots()
-    ax.bar(np.arange(len(model.vq.codebook_hist)), model.vq.codebook_hist.cpu())
+    agg_codebook_hist += model.vq.codebook_hist.cpu()
+    # ax.bar(np.arange(len(model.vq.codebook_hist)), model.vq.codebook_hist.cpu())
+    ax.bar(np.arange(len(agg_codebook_hist)), agg_codebook_hist)
     tmp_file = 'histog.png'
     fig.savefig(tmp_file, format='png')
     plt.close(fig)
     codebook_hist =  np.asarray(Image.open(tmp_file))
     writer.add_image('Codebook index hist', codebook_hist[:,:,:3], iter_no, dataformats="HWC")
     # wandb.log({'Codebook index hist': wandb.Image(codebook_hist[:,:,:3])})
+    return agg_codebook_hist
 
 if __name__ == '__main__':
 
