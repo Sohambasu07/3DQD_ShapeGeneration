@@ -18,13 +18,13 @@ class ResNet_block3D(nn.Module):
         self.conv1 = nn.Conv3d(self.in_channels, self.out_channels,
                                self.kernel_size, self.stride,
                                self.padding)
-        self.dropout1 = nn.Dropout3d(dropout_rate)
+        self.dropout1 = nn.Dropout(dropout_rate)
         self.norm1 = Normalize(self.out_channels) # nn.BatchNorm3d(out_channels)
         self.nonlinearity1 = nn.ReLU()
         self.conv2 = nn.Conv3d(self.out_channels, self.out_channels,
                                self.kernel_size, self.stride,
                                self.padding)
-        self.dropout2 = nn.Dropout3d(dropout_rate)
+        self.dropout2 = nn.Dropout(dropout_rate)
         self.norm2 = Normalize(self.out_channels) # nn.BatchNorm3d(out_channels)
         self.nonlinearity2 = nn.ReLU()
 
@@ -49,7 +49,7 @@ class ResNet_block3D(nn.Module):
         x = self.conv1(x)
         x = self.dropout1(x)
         x = self.norm1(x)
-        x = self.nonlinearity2(x)
+        x = self.nonlinearity1(x)
         x = self.conv2(x)
         x = self.dropout2(x)
         x = self.norm2(x)
