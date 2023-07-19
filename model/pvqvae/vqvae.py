@@ -8,15 +8,16 @@ from utils import shape2patch, fold_to_voxels
 
 class VQVAE(nn.Module):
     def __init__(self, num_embeddings, embed_dim, codebook_dropout=False, 
-                 codebook_dropout_prob=0.3, resnet_dropout_rate=0.5, 
-                 replace_codebook=False, replace_threshold=0.2, replace_batches=40, *args, **kwargs):
+                 codebook_dropout_prob=0.3, resnet_dropout_rate=0.5,
+                 replace_threshold=0.01, replace_batches=40, *args, **kwargs):
+        
         super().__init__(*args, **kwargs)
+
         self.encoder = Encoder3D(in_channels=1, dropout_rate=resnet_dropout_rate)
         self.decoder = Decoder3D(dropout_rate=resnet_dropout_rate)
         self.vq = VectorQuantizer(n_embed=num_embeddings, e_dim=embed_dim,
                                     codebook_dropout=codebook_dropout, 
-                                    codebook_dropout_prob=codebook_dropout_prob, 
-                                    replace_codebook=replace_codebook,
+                                    codebook_dropout_prob=codebook_dropout_prob,
                                     replace_threshold=replace_threshold,
                                     replace_batches=replace_batches)
 

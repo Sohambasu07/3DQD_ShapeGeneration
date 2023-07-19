@@ -6,14 +6,13 @@ from einops import rearrange
 class VectorQuantizer(nn.Module):
     def __init__(self, n_embed=512, e_dim=256, beta=0.25, 
                  codebook_dropout=False, codebook_dropout_prob=0.3, 
-                 replace_codebook=False, replace_threshold=0.01, replace_batches=40, eps=1e-12):
+                 replace_threshold=0.01, replace_batches=40, eps=1e-12):
         super().__init__()
         self.n_embed = n_embed
         self.e_dim = e_dim
         self.beta = beta
         self.codebook_dropout = codebook_dropout
         self.codebook_dropout_prob = codebook_dropout_prob
-        self.replace_codebook = replace_codebook
         self.replace_threshold = replace_threshold
         self.replace_batches = replace_batches
         self.eps = eps

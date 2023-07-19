@@ -20,8 +20,8 @@ from PIL import Image
 # Training loop
 def train(model, train_dataloader, val_dataloader, 
           criterion, learning_rate, optimizer, num_epoch=5, 
-          L1_lambda = 0.001, device='cuda', experiment_params='',
-          replace_threshold=0.2, replace_batches=40):
+          L1_lambda = 0.001, device='cuda', experiment_params='', 
+          replace_codebook=True, replace_batches=40):
     
     logging.basicConfig(level=logging.INFO)
     writer = SummaryWriter(comment=f'nsvq-{experiment_params}-L1_lambda={L1_lambda}')
@@ -51,6 +51,11 @@ def train(model, train_dataloader, val_dataloader,
         # Training
         model.train()  # Set the model to train mode
 
+        replace_batches *= (epoch + 1)
+
+        if replace_batches >= len(train_dataloader):
+            replace_codebook = False
+
         logging.info('#' * 50)
         logging.info('Epoch [{}/{}]'.format(epoch + 1, num_epoch))
 
@@ -64,9 +69,10 @@ def train(model, train_dataloader, val_dataloader,
         for batch_idx, tsdf_sample in enumerate(tqdm_dataloader):
 
             # Replacing codebook entries
-            if batch_idx != 0 and batch_idx % replace_batches == 0:
-                model.vq.replace_codebook_entries()
-            #     # logging.info("Codebook entries replaced")
+            if replace_codebook:
+                if batch_idx != 0 and batch_idx % replace_batches == 0:
+                    model.vq.replace_codebook_entries()
+                #     # logging.info("Codebook entries replaced")
 
             model_path = tsdf_sample[1][0]
             tsdf = tsdf_sample[0][0]
@@ -216,11 +222,11 @@ if __name__ == '__main__':
     parser.add_argument('--embed_dim', type=int, default=256, help='Embedding dimension')
     parser.add_argument('--codebook_dropout', type=bool, default=False, help='Whether to use codebook dropout')
     parser.add_argument('--codebook_dropout_prob', type=float, default=0.3, help='Codebook dropout probability')
-    parser.add_argument('--replace_codebook', type=bool, default=False, help='Whether to replace codebook entries')
     parser.add_argument('--learning_rate', type=float, default=0.001, help='Learning rate')
     parser.add_argument('--num_epoch', type=int, default=10, help='Number of epochs')
     parser.add_argument('--L1_lambda', type=float, default=0.01, help='L1 regularization lambda')
     parser.add_argument('--resnet_dropout', type=float, default=0.5, help='Dropout rate for Resnet blocks')
+    parser.add_argument('--replace_codebook', type=bool, default=True, help='Whether to replace codebook entries')
     parser.add_argument('--replace_threshold', type=float, default=0.2, help='Codebook replacement threshold')
     parser.add_argument('--replace_batches', type=int, default=40, help='Number of batches to replace codebook entries')
 
@@ -263,7 +269,9 @@ if __name__ == '__main__':
                   embed_dim=embed_dim, 
                   codebook_dropout=codebook_dropout, 
                   codebook_dropout_prob=codebook_dropout_prob,
-                  replace_codebook=args.replace_codebook).to(device)
+                  resnet_dropout_rate=args.resnet_dropout,
+                  replace_batches=args.replace_batches,
+                  replace_threshold=args.replace_threshold).to(device)
     
     summary(model, input_size=(512, 1, 8, 8, 8))
     # x_head, vq_loss = model(tsdf)
@@ -284,6 +292,6 @@ if __name__ == '__main__':
                  L1_lambda=L1_lambda, 
                  device=device,
                  experiment_params=experiment_params,
-                 replace_threshold=args.replace_threshold,
+                 replace_codebook=args.replace_codebook,
                  replace_batches=args.replace_batches)
     
