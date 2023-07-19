@@ -127,7 +127,7 @@ def train(model, train_dataloader, val_dataloader,
         # Validation
         model.eval()
 
-        val_avr_total_loss = 0.0
+        val_avr_tot_loss = 0.0
 
         val_total_loss_buffer = []
         val_recon_loss_buffer = []
@@ -198,6 +198,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Train a PVQVAE model')
     parser.add_argument('--dataset_path', type=str, default='./dataset', help='Path to the dataset')
+    parser.add_argument('--splits', nargs='+', type=float, default=[0.8, 0.1, 0.1], help='Train, Val, Test splits')
     parser.add_argument('--num_embed', type=int, default=128, help='Number of embeddings')
     parser.add_argument('--embed_dim', type=int, default=256, help='Embedding dimension')
     parser.add_argument('--codebook_dropout', type=bool, default=False, help='Whether to use codebook dropout')
@@ -210,9 +211,8 @@ if __name__ == '__main__':
 
 
     shapenet_dataset = ShapeNet(dataset_dir=args.dataset_path,
-                                split_ratio={'train': 0.8, 'val': 0.1, 'test': 0.1})    
+                                split_ratio={'train': args.splits[0], 'val': args.splits[1], 'test': args.splits[2]})    
     train_dataset, val_dataset, test_dataset = shapenet_dataset.split_dataset()
-
 
     #Saving the test dataset paths
 
