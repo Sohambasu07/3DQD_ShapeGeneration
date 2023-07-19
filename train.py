@@ -161,7 +161,7 @@ def train(model, train_dataloader, val_dataloader,
             tsdf = tsdf_sample[0]
 
             tsdf = tsdf.to(device)
-            tsdf = torch.reshape(tsdf, (1, 1, *tsdf.shape))
+            tsdf = torch.reshape(tsdf, (tsdf.shape[0], 1, *tsdf.shape[1:]))
             # patched_tsdf = shape2patch(tsdf)
             patched_tsdf = unfold_to_cubes(tsdf)
             with torch.no_grad():
