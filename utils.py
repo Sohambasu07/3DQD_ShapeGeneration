@@ -74,7 +74,7 @@ if __name__ == '__main__':
     # test_x = torch.zeros((512, 1, 8, 8, 8))
     # test_x = torch.randn((1, 1, 64, 64, 64))
     #load a saved tsdf file and display to verify
-    file_path = args.dataset_path + '/plane/plane_3.pkl'
+    file_path = args.dataset_path + '/chair/chair_3.pkl'
 
     with open(file_path, 'rb') as f:
         tsdf_sample = pickle.load(f)
@@ -86,7 +86,7 @@ if __name__ == '__main__':
 
     test_x = torch.unsqueeze(torch.unsqueeze(test_x, dim=0), dim=0)
     test_x = shape2patch(test_x)
-    folded_x = patch2shape(test_x)
+    folded_x = fold_to_voxels(test_x, 1, 8)
 
     display_tsdf(folded_x.squeeze().squeeze().cpu(), mc_level=0.0)
 

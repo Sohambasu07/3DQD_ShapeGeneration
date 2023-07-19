@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from einops import rearrange
+import numpy as np
 
 
 class VectorQuantizer(nn.Module):
@@ -18,6 +19,17 @@ class VectorQuantizer(nn.Module):
         # Create a lookup table with n_embed items, each of size e_dim
         self.embedding = nn.Embedding(self.n_embed, self.e_dim)
 
+
+    def update_codebook(self):
+        with torch.no_grad():
+            most_frequent_idx = torch.argmax(self.codebook_hist)
+            most_frequent_embed = self.embedding(most_frequent_idx)
+            # _, most_used_idxs = torch.mode(self.codebook_hist)
+            new_weights = torch.zeros_like(self.embedding.weight.data)
+            new_weights[:] = most_frequent_embed
+            self.embedding.weight = nn.Parameter(new_weights)
+
+
     def forward(self, z, is_training=True):
         z_flattened = z.view(-1, self.e_dim)
         # print(z_flattened.shape)
@@ -29,7 +41,7 @@ class VectorQuantizer(nn.Module):
             # select the first 70% of the indices
             num_selected = int((1 - self.codebook_dropout_prob) * self.n_embed)
             indices, _ = torch.sort(indices[:num_selected])
-            embeddings = self.embedding(indices)
+            embeddings = self.embedding(indices.to(self.device))
         else:
             # Get all embeddings
             embeddings = self.embedding.weight
