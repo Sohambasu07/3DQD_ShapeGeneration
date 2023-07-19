@@ -51,10 +51,10 @@ def train(model, train_dataloader, val_dataloader,
         # Training
         model.train()  # Set the model to train mode
 
-        replace_batches *= (epoch + 1)
+        replace_batches = 2 **(epoch + 2)
 
         if replace_batches >= len(train_dataloader):
-            replace_codebook = False
+            replace_batches = len(train_dataloader)//2
 
         logging.info('#' * 50)
         logging.info('Epoch [{}/{}]'.format(epoch + 1, num_epoch))
