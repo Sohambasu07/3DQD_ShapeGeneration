@@ -7,7 +7,7 @@ import argparse
 
 from tsdf_dataset import ShapeNet
 from model.pvqvae.vqvae import VQVAE
-from utils import shape2patch, patch2shape, log_reconstructed_mesh
+from utils import shape2patch, patch2shape, log_reconstructed_mesh, unfold_to_cubes
 from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 from tqdm import tqdm
@@ -24,7 +24,7 @@ def train(model, train_dataloader, val_dataloader,
           replace_codebook=True, replace_batches=40):
     
     logging.basicConfig(level=logging.INFO)
-    writer = SummaryWriter(comment=f'nsvq-{experiment_params}-L1_lambda={L1_lambda}')
+    writer = SummaryWriter(comment=f'nsvq+noL1-{experiment_params}-L1_lambda={L1_lambda}')
 
     # wandb.login()
 
@@ -74,14 +74,14 @@ def train(model, train_dataloader, val_dataloader,
                     model.vq.replace_codebook_entries()
                 #     # logging.info("Codebook entries replaced")
 
-            model_path = tsdf_sample[1][0]
-            tsdf = tsdf_sample[0][0]
+            model_path = tsdf_sample[1]
+            tsdf = tsdf_sample[0]
 
             optimizer.zero_grad()  # Clear the gradients
 
             tsdf = tsdf.to(device)
-            tsdf = torch.reshape(tsdf, (1, 1, *tsdf.shape))
-            patched_tsdf = shape2patch(tsdf)
+            tsdf = torch.reshape(tsdf, (tsdf.shape[0], 1, *tsdf.shape[1:]))
+            patched_tsdf = unfold_to_cubes(tsdf)
             reconstructed_data, vq_loss, com_loss = model(patched_tsdf)  # Forward pass
             # reconstructed_data = patch2shape(patched_recon_data)
             recon_loss = criterion(reconstructed_data, tsdf)  # Compute the loss
@@ -94,7 +94,7 @@ def train(model, train_dataloader, val_dataloader,
                 L1_regloss += L1_penalty(param, torch.zeros_like(param))
             L1_regloss = L1_lambda * L1_regloss
 
-            total_loss = recon_loss + L1_regloss
+            total_loss = recon_loss
             total_loss.backward()  # Backpropagation
             optimizer.step()  # Update the weights
             with torch.no_grad():
@@ -136,7 +136,7 @@ def train(model, train_dataloader, val_dataloader,
                                             .format(avr_tot_loss, avr_recon_loss, 
                                             avr_vq_loss, avr_com_loss, avr_reg_loss))
         with torch.no_grad():
-            log_reconstructed_mesh(tsdf, reconstructed_data, writer, model_path, epoch)
+            log_reconstructed_mesh(tsdf[0], reconstructed_data[0], writer, model_path, epoch)
         
         print()
         
@@ -156,8 +156,10 @@ def train(model, train_dataloader, val_dataloader,
             tsdf = tsdf_sample[0][0]
 
             tsdf = tsdf.to(device)
-            tsdf = torch.reshape(tsdf, (1, 1, *tsdf.shape))
-            patched_tsdf = shape2patch(tsdf)
+            tsdf = torch.reshape(tsdf, (-1, 1, *tsdf.shape))
+            # patched_tsdf = shape2patch(tsdf)
+            patched_tsdf = unfold_to_cubes(tsdf)
+
             with torch.no_grad():
                 reconstructed_data, val_vq_loss, val_com_loss = model(patched_tsdf, is_training=False)
                 val_recon_loss = criterion(reconstructed_data, tsdf)
@@ -217,6 +219,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Train a PVQVAE model')
     parser.add_argument('--dataset_path', type=str, default='./dataset', help='Path to the dataset')
+    parser.add_argument('--batch_size', type=int, default=1, help='Batch size')
     parser.add_argument('--splits', nargs='+', type=float, default=[0.8, 0.1, 0.1], help='Train, Val, Test splits')
     parser.add_argument('--num_embed', type=int, default=128, help='Number of embeddings')
     parser.add_argument('--embed_dim', type=int, default=256, help='Embedding dimension')
@@ -228,7 +231,7 @@ if __name__ == '__main__':
     parser.add_argument('--resnet_dropout', type=float, default=0.5, help='Dropout rate for Resnet blocks')
     parser.add_argument('--replace_codebook', type=bool, default=True, help='Whether to replace codebook entries')
     parser.add_argument('--replace_threshold', type=float, default=0.2, help='Codebook replacement threshold')
-    parser.add_argument('--replace_batches', type=int, default=40, help='Number of batches to replace codebook entries')
+    parser.add_argument('--replace_batches', type=int, default=10, help='Number of batches to replace codebook entries')
 
     args = parser.parse_args()
 
@@ -251,8 +254,8 @@ if __name__ == '__main__':
         for item in test_datapaths:
             f.write("%s\n" % item)
 
-    train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=1, shuffle=True)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True)
 
     # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
