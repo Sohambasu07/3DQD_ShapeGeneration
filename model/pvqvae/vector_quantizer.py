@@ -57,8 +57,8 @@ class VectorQuantizer(nn.Module):
         if is_training:
             self.codebook_hist[codebook_idxs] += 1         
 
-        vq_loss = torch.mean((z_q - z.detach()) ** 2)
-        commitment_loss = self.beta * torch.mean((z_q.detach() - z) ** 2)
+        # vq_loss = torch.mean((z_q - z.detach()) ** 2)
+        # commitment_loss = self.beta * torch.mean((z_q.detach() - z) ** 2)
 
         # preserve gradients
         # z_q = z + (z_q - z).detach()
@@ -67,7 +67,7 @@ class VectorQuantizer(nn.Module):
             noise = torch.rand_like(z_q)
             z_q = z + torch.norm(z - z_q)*noise/torch.norm(noise)
 
-        return z_q, vq_loss, commitment_loss, codebook_idxs
+        return z_q, codebook_idxs
     
     def replace_codebook_entries(self):
 

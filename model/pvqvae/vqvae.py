@@ -25,16 +25,17 @@ class VQVAE(nn.Module):
         # x = torch.reshape(x, (1, 1, *x.shape))
         # patched_tsdf = shape2patch(x)
         encoded = self.encoder(patched_tsdf)
-        z_q, vq_loss, commitment_loss, _ = self.vq(encoded, is_training)
-        vq_loss = torch.tensor(0.0, dtype=torch.float32).to(z_q.device)
-        commitment_loss = torch.tensor(0.0, dtype=torch.float32).to(z_q.device)
+        z_q, _ = self.vq(encoded, is_training)
+        # vq_loss = torch.tensor(0.0, dtype=torch.float32).to(z_q.device)
+        # commitment_loss = torch.tensor(0.0, dtype=torch.float32).to(z_q.device)
 
         #z_q.shape [512, 256, 1, 1, 1]
         #voxel_z_q [1, 256, 8, 8, 8]
-        voxel_z_q = fold_to_voxels(x_cubes=z_q, batch_size=1, ncubes_per_dim=8)
+        batch_size = z_q.shape[0] // 512
+        voxel_z_q = fold_to_voxels(x_cubes=z_q, batch_size=batch_size, ncubes_per_dim=8)
         x_head = self.decoder(voxel_z_q)
 
-        return x_head, vq_loss, commitment_loss
+        return x_head
     
 
 
