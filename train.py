@@ -24,7 +24,7 @@ def train(model, train_dataloader, val_dataloader,
           replace_codebook=True, replace_batches=40):
     
     logging.basicConfig(level=logging.INFO)
-    writer = SummaryWriter(comment=f'nsvq+noL1-{experiment_params}-L1_lambda={L1_lambda}')
+    writer = SummaryWriter(comment=f'{experiment_params}')
 
     # wandb.login()
 
@@ -156,7 +156,7 @@ def train(model, train_dataloader, val_dataloader,
             tsdf = tsdf_sample[0][0]
 
             tsdf = tsdf.to(device)
-            tsdf = torch.reshape(tsdf, (-1, 1, *tsdf.shape))
+            tsdf = torch.reshape(tsdf, (tsdf.shape[0], 1, *tsdf.shape[1:]))
             # patched_tsdf = shape2patch(tsdf)
             patched_tsdf = unfold_to_cubes(tsdf)
 
@@ -226,7 +226,7 @@ if __name__ == '__main__':
     parser.add_argument('--codebook_dropout', type=bool, default=False, help='Whether to use codebook dropout')
     parser.add_argument('--codebook_dropout_prob', type=float, default=0.3, help='Codebook dropout probability')
     parser.add_argument('--learning_rate', type=float, default=0.001, help='Learning rate')
-    parser.add_argument('--num_epoch', type=int, default=10, help='Number of epochs')
+    parser.add_argument('--num_epoch', type=int, default=20, help='Number of epochs')
     parser.add_argument('--L1_lambda', type=float, default=0.01, help='L1 regularization lambda')
     parser.add_argument('--resnet_dropout', type=float, default=0.5, help='Dropout rate for Resnet blocks')
     parser.add_argument('--replace_codebook', type=bool, default=True, help='Whether to replace codebook entries')
@@ -266,7 +266,7 @@ if __name__ == '__main__':
     embed_dim = args.embed_dim
     codebook_dropout = args.codebook_dropout
     codebook_dropout_prob = args.codebook_dropout_prob
-    experiment_params = f'bs={args.batch_size}-num_embe={num_embed}-embed_dim={embed_dim}-vq_drop={codebook_dropout}={codebook_dropout_prob}'
+    experiment_params = f'nsvq+noL1+chair+table-bs={args.batch_size}-L1_lambda={args.L1_lambda}-num_embe={num_embed}-embed_dim={embed_dim}-vq_drop={codebook_dropout}={codebook_dropout_prob}'
 
     model = VQVAE(num_embeddings=num_embed, 
                   embed_dim=embed_dim, 
