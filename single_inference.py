@@ -12,7 +12,7 @@ from utils import shape2patch, patch2shape, display_tsdf
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Inference PVQVAE')
-    parser.add_argument('--mesh_path', type=str, default='./dataset/chair/chair_3.pkl', help='path to input mesh')
+    parser.add_argument('--mesh_path', type=str, default='./dataset/chair/chair_5.pkl', help='path to input mesh')
     parser.add_argument('--model_path', type=str, default='./best_model.pth', help='Path to model')
 
 
@@ -38,14 +38,15 @@ if __name__ == '__main__':
     tsdf = tsdf.to(device)
     input_tsdf = torch.reshape(tsdf, (1, 1, *tsdf.shape))
     patched_tsdf = shape2patch(input_tsdf)
-
+    model.eval()
     with torch.no_grad():
-        reconstructed_data, test_vq_loss, test_com_loss = model(patched_tsdf, is_training=False)
+        reconstructed_data, test_vq_loss, test_com_loss, codebook_idxs = model(patched_tsdf, is_training=False)
         test_recon_loss = torch.mean((reconstructed_data - tsdf) ** 2)
         print(f'{test_recon_loss=}')
         print(input_tsdf.shape)
         print(reconstructed_data.shape)
         display_tsdf(tsdf.cpu(), 0)
+        print(codebook_idxs)
         reconstructed_data = torch.squeeze(reconstructed_data)
         display_tsdf(reconstructed_data.cpu(), (reconstructed_data.max() + reconstructed_data.min())/ 2)
 
