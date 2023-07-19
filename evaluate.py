@@ -48,11 +48,14 @@ def evaluate(test_dataloader, model, criterion, device='cuda'):
                                         .format(test_avr_tot_loss, test_avr_recon_loss, 
                                                 test_avr_vq_loss, test_avr_com_loss))
         
-        if batch_idx == 1:
-            rec_data = patch2shape(reconstructed_data)
-            rec_data = rec_data.squeeze().squeeze()
-            print(rec_data.min(), rec_data.max())
+        if batch_idx == 2:
+            # rec_data = patch2shape(reconstructed_data)
+            # rec_data = rec_data.squeeze().squeeze()
+            # print(rec_data.min(), rec_data.max())
+            rec_data = reconstructed_data.squeeze().squeeze()
             rec_data = rec_data.cpu()
+            print(rec_data.shape)
+            # rec_data = rec_data.cpu()
             print((rec_data.max()+rec_data.min())/2.0)
             display_tsdf(rec_data, mc_level=(rec_data.max()+rec_data.min())/2.0)#(rec_data.max()+rec_data.min())/2.0)
         
@@ -65,15 +68,16 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Evaluate PVQVAE')
     parser.add_argument('--dataset_path', type=str, default='./dataset', help='Path to dataset')
+    parser.add_argument('--splits', nargs='+', type=float, default=[0.8, 0.1, 0.1], help='Train, Val, Test splits')
     parser.add_argument('--model_path', type=str, default='./best_model.pth', help='Path to model')
-    parser.add_argument('--embed_dim', type=int, default=256, help='Embedding dimension')
     parser.add_argument('--num_embed', type=int, default=128, help='Number of embeddings')
+    parser.add_argument('--embed_dim', type=int, default=256, help='Embedding dimension')
 
     args = parser.parse_args()
 
     # Load test dataset
     shapenet_dataset = ShapeNet(dataset_dir=args.dataset_path, split={'train': False, 'val': False, 'test': True},
-                                split_ratio={'train': 0.8, 'val': 0.1, 'test': 0.1})
+                                split_ratio={'train': args.splits[0], 'val': args.splits[1], 'test': args.splits[2]})
 
     test_paths = []
     with open('./test_dataset_paths.txt', 'r') as f:
