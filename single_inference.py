@@ -12,8 +12,10 @@ from utils import shape2patch, patch2shape, display_tsdf
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Inference PVQVAE')
-    parser.add_argument('--mesh_path', type=str, default='./dataset/chair/chair_3.pkl', help='path to input mesh')
+    parser.add_argument('--mesh_path', type=str, default='./dataset/table/table_378.pkl', help='path to input mesh')
     parser.add_argument('--model_path', type=str, default='./best_model.pth', help='Path to model')
+    parser.add_argument('--num_embed', type=int, default=128, help='Number of embeddings')
+    parser.add_argument('--embed_dim', type=int, default=256, help='Embedding dimension')
 
 
     args = parser.parse_args()
@@ -26,9 +28,9 @@ if __name__ == '__main__':
     # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Device: ", device)
-    embed_dim = 256
-    num_embed = 128
-    model = VQVAE(num_embed, embed_dim).to(device)
+    num_embed = args.num_embed
+    embed_dim = args.embed_dim
+    model = VQVAE(num_embeddings=num_embed, embed_dim=embed_dim).to(device)
 
     # Load model
     model.load_state_dict(torch.load(args.model_path))

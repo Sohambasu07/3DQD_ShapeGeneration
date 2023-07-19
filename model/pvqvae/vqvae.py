@@ -22,7 +22,7 @@ class VQVAE(nn.Module):
 
         #z_q.shape [512, 256, 1, 1, 1]
         #voxel_z_q [1, 256, 8, 8, 8]
-        voxel_z_q = fold_to_voxels(z_q, 1, 8)
+        voxel_z_q = fold_to_voxels(x_cubes=z_q, batch_size=1, ncubes_per_dim=8)
         x_head = self.decoder(voxel_z_q)
 
         return x_head, vq_loss, commitment_loss
