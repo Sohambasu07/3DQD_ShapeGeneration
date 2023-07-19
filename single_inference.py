@@ -36,6 +36,8 @@ if __name__ == '__main__':
     model.load_state_dict(torch.load(args.model_path))
     model.to(device)
 
+    model.eval()
+
     tsdf = torch.from_numpy(tsdf)
     tsdf = tsdf.to(device)
     input_tsdf = torch.reshape(tsdf, (1, 1, *tsdf.shape))
