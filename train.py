@@ -152,8 +152,8 @@ def train(model, train_dataloader, val_dataloader,
 
         vtqdm_dataloader = tqdm(val_dataloader)
         for batch_idx, tsdf_sample in enumerate(vtqdm_dataloader):
-            model_path = tsdf_sample[1][0]
-            tsdf = tsdf_sample[0][0]
+            model_path = tsdf_sample[1]
+            tsdf = tsdf_sample[0]
 
             tsdf = tsdf.to(device)
             tsdf = torch.reshape(tsdf, (tsdf.shape[0], 1, *tsdf.shape[1:]))
