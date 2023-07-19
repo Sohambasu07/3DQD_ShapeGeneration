@@ -41,7 +41,8 @@ class VectorQuantizer(nn.Module):
             # select the first 70% of the indices
             num_selected = int((1 - self.codebook_dropout_prob) * self.n_embed)
             indices, _ = torch.sort(indices[:num_selected])
-            embeddings = self.embedding(indices.to(self.device))
+            indices = indices.to(self.device)
+            embeddings = self.embedding(indices)
         else:
             # Get all embeddings
             embeddings = self.embedding.weight
