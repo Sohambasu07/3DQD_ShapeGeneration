@@ -6,7 +6,7 @@ from einops import rearrange
 class VectorQuantizer(nn.Module):
     def __init__(self, n_embed=512, e_dim=256, beta=0.25, 
                  codebook_dropout=False, codebook_dropout_prob=0.3, 
-                 replace_codebook=False, replace_threshold=0.01, replace_batches=40):
+                 replace_codebook=False, replace_threshold=0.01, replace_batches=40, eps=1e-12):
         super().__init__()
         self.n_embed = n_embed
         self.e_dim = e_dim
@@ -16,6 +16,7 @@ class VectorQuantizer(nn.Module):
         self.replace_codebook = replace_codebook
         self.replace_threshold = replace_threshold
         self.replace_batches = replace_batches
+        self.eps = eps
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.codebook_hist = torch.zeros(self.n_embed).to(self.device)
@@ -49,13 +50,13 @@ class VectorQuantizer(nn.Module):
                      torch.einsum('bd,dn->bn', z_flattened, rearrange(embeddings, 'n d -> d n'))
         # Don't understand this in the paper implementation. Is this the correct way?
 
-        codebook_idxs = torch.argmin(similarity, dim=-1)
+        codebook_idxs = torch.argmax(similarity, dim=-1)
         # print(codebook_idxs.shape)
         # print(codebook_idxs)
         z_q = self.embedding(codebook_idxs).view(z.shape)
 
         if is_training:
-            self.codebook_hist[codebook_idxs] += 1     
+            self.codebook_hist[codebook_idxs] += 1         
 
         vq_loss = torch.mean((z_q - z.detach()) ** 2)
         commitment_loss = self.beta * torch.mean((z_q.detach() - z) ** 2)
@@ -69,16 +70,31 @@ class VectorQuantizer(nn.Module):
 
         return z_q, vq_loss, commitment_loss, codebook_idxs
     
-    # def replace_codebook_entries(self):
+    def replace_codebook_entries(self):
 
-    #     with torch.no_grad():
-    #         print(self.codebook_hist/ torch.sum(self.codebook_hist))
-    #         max_idxs = torch.where(self.codebook_hist/ torch.sum(self.codebook_hist) > self.replace_threshold)[0]
-    #         min_idxs = torch.where(self.codebook_hist/ torch.sum(self.codebook_hist) <= self.replace_threshold)[0]
-    #         print(max_idxs.shape, min_idxs.shape)
+        with torch.no_grad():
 
-    #         if max_idxs.shape[0] > min_idxs.shape[0]:
+            unused_indices = torch.where((self.codebook_hist.cpu() / self.replace_batches) < self.replace_threshold)[0]
+            used_indices = torch.where((self.codebook_hist.cpu() / self.replace_batches) >= self.replace_threshold)[0]
 
-    #             temp = self.embedding.weight[max_idxs]
-    #             self.embedding.weight[max_idxs] = self.embedding.weight[min_idxs]
-    #             self.embedding.weight[min_idxs] = temp
+            unused_count = unused_indices.shape[0]
+            used_count = used_indices.shape[0]
+
+            if used_count == 0:
+                # print(f'####### used_indices equals zero / shuffling whole codebooks ######')
+                self.embedding.weight += self.eps * torch.randn(self.embedding.weight.size(), device=self.device).clone()
+            else:
+                used = self.embedding.weight[used_indices].clone()
+                if used_count < unused_count:
+                    used_codebooks = used.repeat(int((unused_count / (used_count + self.eps)) + 1), 1)
+                    used_codebooks = used_codebooks[torch.randperm(used_codebooks.shape[0])]
+                else:
+                    used_codebooks = used
+
+                self.embedding.weight[unused_indices] *= 0
+                self.embedding.weight[unused_indices] += used_codebooks[range(unused_count)] + self.eps * torch.randn(
+                    (unused_count, self.e_dim), device=self.device).clone()
+
+            # print(f'************* Replaced ' + str(unused_count) + f' codebooks *************')
+            self.codebook_hist[:] = 0.0
+
