@@ -136,7 +136,7 @@ def train(model, train_dataloader, val_dataloader,
                                             .format(avr_tot_loss, avr_recon_loss, 
                                             avr_vq_loss, avr_com_loss, avr_reg_loss))
         with torch.no_grad():
-            log_reconstructed_mesh(tsdf[0], reconstructed_data[0], writer, model_path, epoch)
+            log_reconstructed_mesh(tsdf[0], reconstructed_data[0], writer, model_path[0], epoch)
         
         print()
         
@@ -266,7 +266,7 @@ if __name__ == '__main__':
     embed_dim = args.embed_dim
     codebook_dropout = args.codebook_dropout
     codebook_dropout_prob = args.codebook_dropout_prob
-    experiment_params = f'num_embe={num_embed}-embed_dim={embed_dim}-vq_drop={codebook_dropout}={codebook_dropout_prob}'
+    experiment_params = f'bs={args.batch_size}-num_embe={num_embed}-embed_dim={embed_dim}-vq_drop={codebook_dropout}={codebook_dropout_prob}'
 
     model = VQVAE(num_embeddings=num_embed, 
                   embed_dim=embed_dim, 
