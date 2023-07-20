@@ -21,7 +21,7 @@ from PIL import Image
 def train(model, train_dataloader, val_dataloader, 
           criterion, learning_rate, optimizer, num_epoch=5, 
           L1_lambda = 0.001, device='cuda', experiment_params='', 
-          replace_codebook=True, replace_batches=40):
+          replace_codebook=True, replace_batches=40, lr_schedule='off'):
     
     logging.basicConfig(level=logging.INFO)
     writer = SummaryWriter(comment=f'{experiment_params}')
@@ -39,8 +39,25 @@ def train(model, train_dataloader, val_dataloader,
         "dataset": "ShapeNetv2",
         "optimizer": optimizer.__class__.__name__,
         "epochs": num_epoch,
+        "batch_size": train_dataloader.batch_size,
+        "L1_lambda": L1_lambda,
+        "replace_codebook": replace_codebook,
+        "replace_batches": replace_batches,
+        "lr_schedule": lr_schedule
         }
     )
+
+    scheduler = None
+    if lr_schedule != 'off':
+        if lr_schedule == 'step':
+            scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1000, gamma=0.5)
+        elif lr_schedule == 'plateau':
+            scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=True)
+        elif lr_schedule == 'cosine':
+            print("Max iterations: ", len(train_dataloader)*num_epoch)
+            scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=len(train_dataloader)*num_epoch, eta_min=0.0001, verbose=True)
+        elif lr_schedule == 'exp':
+            scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.1, verbose=True)
 
     agg_codebook_hist = torch.zeros(model.vq.n_embed).cpu()
 
@@ -97,6 +114,7 @@ def train(model, train_dataloader, val_dataloader,
             total_loss = recon_loss + L1_regloss
             total_loss.backward()  # Backpropagation
             optimizer.step()  # Update the weights
+            scheduler.step()
             with torch.no_grad():
                 avr_tot_loss_buffer.append(total_loss.item())
                 avr_recon_loss_buffer.append(recon_loss.item())
@@ -122,6 +140,7 @@ def train(model, train_dataloader, val_dataloader,
                     # writer.add_scalar('VQ loss/Train', avr_vq_loss, iter_no)
                     # writer.add_scalar('Commit loss/Train', avr_com_loss, iter_no)
                     writer.add_scalar('Regularization loss/Train', avr_reg_loss, iter_no)
+                    writer.add_scalar('Learning Rate', optimizer.param_groups[0]['lr'], iter_no)
                     agg_codebook_hist = log_codebook_idx_histogram(model, writer, iter_no, agg_codebook_hist)
 
 
@@ -129,7 +148,8 @@ def train(model, train_dataloader, val_dataloader,
                        "Recon loss/Train": avr_recon_loss, 
                     #    "VQ loss/Train": avr_vq_loss,
                     #    "Commit loss/Train": avr_com_loss,
-                       "Regularization loss/Train": avr_reg_loss
+                       "Regularization loss/Train": avr_reg_loss,
+                        "Learning Rate": optimizer.param_groups[0]['lr']
                        })
             
             # tqdm_dataloader.set_postfix_str("Total Loss: {:.4f}, Recon Loss: {:.4f}, Vq Loss: {:.4f}, Commit Loss: {:.4f}, Reg Loss: {:.4f}"\
@@ -137,8 +157,8 @@ def train(model, train_dataloader, val_dataloader,
             #                                 avr_vq_loss, avr_com_loss, avr_reg_loss))
 
             
-            tqdm_dataloader.set_postfix_str("Total Loss: {:.4f}, Recon Loss: {:.4f}, Reg Loss: {:.4f}"\
-                                            .format(avr_tot_loss, avr_recon_loss, avr_reg_loss))
+            tqdm_dataloader.set_postfix_str("Total Loss: {:.4f}, Recon Loss: {:.4f}, Reg Loss: {:.4f}, LR: {:.6f}"\
+                                            .format(avr_tot_loss, avr_recon_loss, avr_reg_loss, optimizer.param_groups[0]['lr']))
             
         with torch.no_grad():
             log_reconstructed_mesh(tsdf[0], reconstructed_data[0], writer, model_path[0], epoch)
@@ -236,6 +256,7 @@ if __name__ == '__main__':
     parser.add_argument('--codebook_dropout', type=bool, default=False, help='Whether to use codebook dropout')
     parser.add_argument('--codebook_dropout_prob', type=float, default=0.3, help='Codebook dropout probability')
     parser.add_argument('--learning_rate', type=float, default=0.001, help='Learning rate')
+    parser.add_argument('--lr_schedule', type=str, default='off', help='Learning rate schedule')
     parser.add_argument('--num_epoch', type=int, default=10, help='Number of epochs')
     parser.add_argument('--L1_lambda', type=float, default=0.01, help='L1 regularization lambda')
     parser.add_argument('--resnet_dropout', type=float, default=0.5, help='Dropout rate for Resnet blocks')
@@ -310,5 +331,6 @@ if __name__ == '__main__':
                  device=device,
                  experiment_params=experiment_params,
                  replace_codebook=args.replace_codebook,
-                 replace_batches=args.replace_batches)
+                 replace_batches=args.replace_batches,
+                 lr_schedule=args.lr_schedule)
     
