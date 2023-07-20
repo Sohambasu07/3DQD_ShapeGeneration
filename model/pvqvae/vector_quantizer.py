@@ -36,6 +36,7 @@ class VectorQuantizer(nn.Module):
             indices, _ = torch.sort(indices[:num_selected])
             indices = indices.to(self.device)
             embeddings = self.embedding(indices)
+
         else:
             # Get all embeddings
             embeddings = self.embedding.weight
@@ -55,6 +56,8 @@ class VectorQuantizer(nn.Module):
         z_q = self.embedding(codebook_idxs).view(z.shape)
 
         if is_training:
+            if self.codebook_dropout:
+                codebook_idxs = indices[codebook_idxs]
             self.codebook_hist[codebook_idxs] += 1         
 
         # vq_loss = torch.mean((z_q - z.detach()) ** 2)
