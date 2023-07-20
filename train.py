@@ -228,7 +228,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train a PVQVAE model')
     parser.add_argument('--dataset_path', type=str, default='./dataset', help='Path to the dataset')
     parser.add_argument('--load_model', type=bool, default=False, help='Whether to load a saved model')
-    parser.add_argument('--load_model_path', type=int, default='./final_model.pth', help='Path to the saved model')
+    parser.add_argument('--load_model_path', type=str, default='./final_model.pth', help='Path to the saved model')
     parser.add_argument('--batch_size', type=int, default=1, help='Batch size')
     parser.add_argument('--splits', nargs='+', type=float, default=[0.8, 0.1, 0.1], help='Train, Val, Test splits')
     parser.add_argument('--num_embed', type=int, default=128, help='Number of embeddings')
