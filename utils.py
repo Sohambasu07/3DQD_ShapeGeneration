@@ -87,7 +87,7 @@ if __name__ == '__main__':
     # test_x = torch.zeros((512, 1, 8, 8, 8))
     # test_x = torch.randn((1, 1, 64, 64, 64))
     #load a saved tsdf file and display to verify
-    file_path = args.dataset_path + '/plane/plane_3.pkl'
+    file_path = args.dataset_path + '/table/table_378.pkl'
 
     with open(file_path, 'rb') as f:
         tsdf_sample = pickle.load(f)

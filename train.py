@@ -56,7 +56,7 @@ def train(model, train_dataloader, val_dataloader,
             scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=False)
         elif lr_schedule == 'cosine':
             print("Max iterations: ", len(train_dataloader)*num_epoch)
-            scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=len(train_dataloader)*num_epoch, eta_min=0.0001, verbose=False)
+            scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=len(train_dataloader)*num_epoch, eta_min=0.00003, verbose=False)
         elif lr_schedule == 'exp':
             scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.1, verbose=False)
         else:
@@ -266,8 +266,8 @@ if __name__ == '__main__':
     parser.add_argument('--num_epoch', type=int, default=10, help='Number of epochs')
     parser.add_argument('--L1_lambda', type=float, default=0.01, help='L1 regularization lambda')
     parser.add_argument('--resnet_dropout', type=float, default=0.5, help='Dropout rate for Resnet blocks')
-    parser.add_argument('--replace_codebook', type=bool, default=True, help='Whether to replace codebook entries')
-    parser.add_argument('--replace_threshold', type=float, default=0.2, help='Codebook replacement threshold')
+    parser.add_argument('--replace_codebook', type=bool, default=False, help='Whether to replace codebook entries')
+    parser.add_argument('--replace_threshold', type=float, default=0.01, help='Codebook replacement threshold')
     parser.add_argument('--replace_batches', type=int, default=10, help='Number of batches to replace codebook entries')
 
     args = parser.parse_args()
