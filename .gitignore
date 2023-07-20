@@ -7,3 +7,4 @@ wandb/
 best_model.pth
 final_model.pth
 new_env/
+temp.obj
