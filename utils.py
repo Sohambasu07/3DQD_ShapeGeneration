@@ -30,7 +30,6 @@ def patch2shape(x_head, patch_size=8, output_size=64):
     folded_x_head = torch.unsqueeze(torch.unsqueeze(folded_x_head, dim=0), dim=0)
     return folded_x_head
 
-
 def unfold_to_cubes(x, cube_size=8, stride=8):
     """ 
         assume x.shape: b, c, d, h, w 
@@ -41,7 +40,6 @@ def unfold_to_cubes(x, cube_size=8, stride=8):
     x_cubes = rearrange(x_cubes, 'b c p d h w -> (b p) c d h w')
 
     return x_cubes
-    
 def fold_to_voxels(x_cubes, batch_size, ncubes_per_dim):
     x = rearrange(x_cubes, '(b p) c d h w -> b p c d h w', b=batch_size) 
     x = rearrange(x, 'b (p1 p2 p3) c d h w -> b c (p1 d) (p2 h) (p3 w)',
@@ -62,9 +60,9 @@ def log_reconstructed_mesh(original_tsdf, rec_tsdf, tensorboard_writer, model_pa
     vertices = np.expand_dims(vertices, axis=0)
     faces = np.expand_dims(faces, axis=0)
     tensorboard_writer.add_mesh(model_path, vertices= vertices.copy(), faces=faces.copy(), global_step=iter_no)
-    # mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_normals=normals)
-    # obj = trimesh.exchange.obj.export_obj(mesh)
-    # wandb.log({model_path: wandb.Object3D(obj)})
+    mesh = trimesh.Trimesh(vertices=vertices.squeeze(), faces=faces.squeeze(), vertex_normals=normals)
+    _ = mesh.export("./temp.obj")
+    wandb.log({model_path: wandb.Object3D(open("./temp.obj"))})
 
 
     rec_tsdf = rec_tsdf.squeeze().squeeze()
@@ -74,7 +72,9 @@ def log_reconstructed_mesh(original_tsdf, rec_tsdf, tensorboard_writer, model_pa
     vertices = np.expand_dims(vertices, axis=0)
     faces = np.expand_dims(faces, axis=0)
     tensorboard_writer.add_mesh(model_path, vertices= vertices.copy(), faces=faces.copy(), global_step=iter_no+1)
-    # mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_normals=normals)
+    mesh = trimesh.Trimesh(vertices=vertices.squeeze(), faces=faces.squeeze(), vertex_normals=normals)
+    _ = mesh.export("./temp.obj")
+    wandb.log({model_path: wandb.Object3D(open("./temp.obj"))})
 
 
 if __name__ == '__main__':

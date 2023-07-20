@@ -36,6 +36,7 @@ class VectorQuantizer(nn.Module):
             indices, _ = torch.sort(indices[:num_selected])
             indices = indices.to(self.device)
             embeddings = self.embedding(indices)
+
         else:
             # Get all embeddings
             embeddings = self.embedding.weight
@@ -49,16 +50,18 @@ class VectorQuantizer(nn.Module):
                      torch.einsum('bd,dn->bn', z_flattened, rearrange(embeddings, 'n d -> d n'))
         # Don't understand this in the paper implementation. Is this the correct way?
 
-        codebook_idxs = torch.argmax(similarity, dim=-1)
+        codebook_idxs = torch.argmin(similarity, dim=-1)
         # print(codebook_idxs.shape)
         # print(codebook_idxs)
         z_q = self.embedding(codebook_idxs).view(z.shape)
 
         if is_training:
+            if self.codebook_dropout:
+                codebook_idxs = indices[codebook_idxs]
             self.codebook_hist[codebook_idxs] += 1         
 
-        vq_loss = torch.mean((z_q - z.detach()) ** 2)
-        commitment_loss = self.beta * torch.mean((z_q.detach() - z) ** 2)
+        # vq_loss = torch.mean((z_q - z.detach()) ** 2)
+        # commitment_loss = self.beta * torch.mean((z_q.detach() - z) ** 2)
 
         # preserve gradients
         # z_q = z + (z_q - z).detach()
@@ -67,7 +70,7 @@ class VectorQuantizer(nn.Module):
             noise = torch.rand_like(z_q)
             z_q = z + torch.norm(z - z_q)*noise/torch.norm(noise)
 
-        return z_q, vq_loss, commitment_loss, codebook_idxs
+        return z_q, codebook_idxs
     
     def replace_codebook_entries(self):
 

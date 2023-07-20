@@ -44,7 +44,8 @@ if __name__ == '__main__':
     patched_tsdf = shape2patch(input_tsdf)
 
     with torch.no_grad():
-        reconstructed_data, test_vq_loss, test_com_loss = model(patched_tsdf, is_training=False)
+        # reconstructed_data, test_vq_loss, test_com_loss = model(patched_tsdf, is_training=False)
+        reconstructed_data = model(patched_tsdf, is_training=False)
         test_recon_loss = torch.mean((reconstructed_data - tsdf) ** 2)
         print(f'{test_recon_loss=}')
         print(input_tsdf.shape)
