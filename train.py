@@ -59,6 +59,8 @@ def train(model, train_dataloader, val_dataloader,
             scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=len(train_dataloader)*num_epoch, eta_min=0.0001, verbose=True)
         elif lr_schedule == 'exp':
             scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.1, verbose=True)
+        else:
+            raise ValueError("Invalid learning rate scheduler")
 
     agg_codebook_hist = torch.zeros(model.vq.n_embed).cpu()
 
