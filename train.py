@@ -51,14 +51,14 @@ def train(model, train_dataloader, val_dataloader,
     scheduler = None
     if lr_schedule != 'off':
         if lr_schedule == 'step':
-            scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1000, gamma=0.5)
+            scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1000, gamma=0.5, verbose=False)
         elif lr_schedule == 'plateau':
-            scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=True)
+            scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=False)
         elif lr_schedule == 'cosine':
             print("Max iterations: ", len(train_dataloader)*num_epoch)
-            scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=len(train_dataloader)*num_epoch, eta_min=0.0001, verbose=True)
+            scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=len(train_dataloader)*num_epoch, eta_min=0.0001, verbose=False)
         elif lr_schedule == 'exp':
-            scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.1, verbose=True)
+            scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.1, verbose=False)
         else:
             raise ValueError("Invalid learning rate scheduler")
 
@@ -117,7 +117,8 @@ def train(model, train_dataloader, val_dataloader,
             total_loss = recon_loss + L1_regloss
             total_loss.backward()  # Backpropagation
             optimizer.step()  # Update the weights
-            scheduler.step()
+            if scheduler is not None:
+                scheduler.step()
             with torch.no_grad():
                 avr_tot_loss_buffer.append(total_loss.item())
                 avr_recon_loss_buffer.append(recon_loss.item())
