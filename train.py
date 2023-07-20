@@ -44,7 +44,7 @@ def train(model, train_dataloader, val_dataloader,
         "replace_codebook": replace_codebook,
         "replace_batches": replace_batches,
         "lr_schedule": lr_schedule,
-        "resnet_dropout": model.resnet_dropout_rate,
+        "resnet_dropout": model.encoder.resnet_dropout_rate
         }
     )
 
