@@ -43,7 +43,8 @@ def train(model, train_dataloader, val_dataloader,
         "L1_lambda": L1_lambda,
         "replace_codebook": replace_codebook,
         "replace_batches": replace_batches,
-        "lr_schedule": lr_schedule
+        "lr_schedule": lr_schedule,
+        "resnet_dropout": model.resnet_dropout_rate,
         }
     )
 
@@ -216,6 +217,7 @@ def train(model, train_dataloader, val_dataloader,
 
         torch.save(model.state_dict(), './final_model.pth')
         logging.info("Model saved")
+        wandb.save('./final_model.pth')
         # logging.info(val_avr_tot_loss)
         logging.info(val_avr_recon_loss)
         logging.info(val_loss_bench)
@@ -223,6 +225,7 @@ def train(model, train_dataloader, val_dataloader,
         if val_avr_recon_loss < val_loss_bench:
             val_loss_bench = val_avr_recon_loss
             torch.save(model.state_dict(), './best_model.pth')
+            wandb.save('./best_model.pth')
             logging.info("Best Model saved")
             logging.info(val_avr_recon_loss)
             logging.info(val_loss_bench)
