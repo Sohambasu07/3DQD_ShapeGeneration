@@ -1,12 +1,11 @@
 import torch
 import torch.nn as nn
 from einops import rearrange
-import numpy as np
 
 
 class VectorQuantizer(nn.Module):
-    def __init__(self, n_embed=512, e_dim=256, beta=0.25, 
-                 codebook_dropout=False, codebook_dropout_prob=0.3, 
+    def __init__(self, n_embed=512, e_dim=256, beta=0.25,
+                 codebook_dropout=False, codebook_dropout_prob=0.3,
                  replace_threshold=0.01, replace_batches=40, eps=1e-12):
         super().__init__()
         self.n_embed = n_embed
@@ -59,7 +58,6 @@ class VectorQuantizer(nn.Module):
         similarity = torch.sum(z_flattened ** 2, dim=1, keepdim=True) + \
                      torch.sum(embeddings ** 2, dim=1) - 2 * \
                      torch.einsum('bd,dn->bn', z_flattened, rearrange(embeddings, 'n d -> d n'))
-        # Don't understand this in the paper implementation. Is this the correct way?
 
         codebook_idxs = torch.argmin(similarity, dim=-1)
         # print(codebook_idxs.shape)
@@ -67,9 +65,12 @@ class VectorQuantizer(nn.Module):
         z_q = self.embedding(codebook_idxs).view(z.shape)
 
         if is_training:
-            self.codebook_hist[codebook_idxs] += 1         
+            if self.codebook_dropout:
+                codebook_idxs = indices[codebook_idxs]
 
-        # vq_loss = torch.mean((z_q - z.detach()) ** 2)
+            self.codebook_hist[codebook_idxs] += 1
+
+            # vq_loss = torch.mean((z_q - z.detach()) ** 2)
         # commitment_loss = self.beta * torch.mean((z_q.detach() - z) ** 2)
 
         # preserve gradients
@@ -77,10 +78,10 @@ class VectorQuantizer(nn.Module):
 
         if is_training:
             noise = torch.rand_like(z_q)
-            z_q = z + torch.norm(z - z_q)*noise/torch.norm(noise)
+            z_q = z + torch.norm(z - z_q) * noise / torch.norm(noise)
 
         return z_q, codebook_idxs
-    
+
     def replace_codebook_entries(self):
 
         with torch.no_grad():
@@ -93,7 +94,8 @@ class VectorQuantizer(nn.Module):
 
             if used_count == 0:
                 # print(f'####### used_indices equals zero / shuffling whole codebooks ######')
-                self.embedding.weight += self.eps * torch.randn(self.embedding.weight.size(), device=self.device).clone()
+                self.embedding.weight += self.eps * torch.randn(self.embedding.weight.size(),
+                                                                device=self.device).clone()
             else:
                 used = self.embedding.weight[used_indices].clone()
                 if used_count < unused_count:
@@ -108,4 +110,3 @@ class VectorQuantizer(nn.Module):
 
             # print(f'************* Replaced ' + str(unused_count) + f' codebooks *************')
             self.codebook_hist[:] = 0.0
-
