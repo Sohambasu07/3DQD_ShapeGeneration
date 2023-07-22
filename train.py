@@ -114,7 +114,7 @@ def train(model, train_dataloader, val_dataloader,
                 L1_regloss += L1_penalty(param, torch.zeros_like(param))
             L1_regloss = L1_lambda * L1_regloss
 
-            total_loss = recon_loss + L1_regloss
+            total_loss = recon_loss
             total_loss.backward()  # Backpropagation
             optimizer.step()  # Update the weights
             if scheduler is not None:

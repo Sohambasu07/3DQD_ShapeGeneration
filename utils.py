@@ -40,7 +40,6 @@ def unfold_to_cubes(x, cube_size=8, stride=8):
     x_cubes = rearrange(x_cubes, 'b c p d h w -> (b p) c d h w')
 
     return x_cubes
-
 def fold_to_voxels(x_cubes, batch_size, ncubes_per_dim):
     x = rearrange(x_cubes, '(b p) c d h w -> b p c d h w', b=batch_size) 
     x = rearrange(x, 'b (p1 p2 p3) c d h w -> b c (p1 d) (p2 h) (p3 w)',
