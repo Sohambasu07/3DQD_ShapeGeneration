@@ -24,6 +24,7 @@ class VectorQuantizer(nn.Module):
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.codebook_hist = torch.zeros(self.n_embed).to(self.device)
+        self.agg_hist = torch.zeros(self.n_embed).to(self.device)
 
         # Create a lookup table with n_embed items, each of size e_dim
         self.embedding = nn.Embedding(self.n_embed, self.e_dim)
@@ -89,6 +90,9 @@ class VectorQuantizer(nn.Module):
 
         min_indices = torch.argmin(distances, dim=1)
 
+        if self.codebook_dropout:
+                min_indices = indices[min_indices]
+
         hard_quantized_input = self.embedding(min_indices)
         random_vector = normal_dist.Normal(0, 1).sample(input_data.shape).to(self.device)
 
@@ -106,8 +110,6 @@ class VectorQuantizer(nn.Module):
         avg_probs = torch.mean(encodings, dim=0)
         perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + self.eps)))
 
-        if self.codebook_dropout:
-            min_indices = indices[min_indices]
 
         with torch.no_grad():
             self.codebook_hist[min_indices] += 1
@@ -142,6 +144,7 @@ class VectorQuantizer(nn.Module):
                 self.embedding.weight[unused_indices] += used_codebooks[range(unused_count)] + self.eps * torch.randn(
                     (unused_count, self.e_dim), device=self.device).clone()
 
+            self.agg_hist += self.codebook_hist
             self.codebook_hist[:] = 0.0
 
     def inference(self, z):

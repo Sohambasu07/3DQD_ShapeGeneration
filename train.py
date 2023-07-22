@@ -62,8 +62,6 @@ def train(model, train_dataloader, val_dataloader,
         else:
             raise ValueError("Invalid learning rate scheduler")
 
-    agg_codebook_hist = torch.zeros(model.vq.n_embed).cpu()
-
     logging.info("Starting training")
 
     val_loss_bench = 100000.0
@@ -72,6 +70,8 @@ def train(model, train_dataloader, val_dataloader,
         model.train()  # Set the model to train mode
 
         replace_batches = 2 **(epoch + 2)
+
+        model.vq.replace_batches = replace_batches
 
         if replace_batches >= len(train_dataloader):
             replace_batches = len(train_dataloader)//2
@@ -145,7 +145,11 @@ def train(model, train_dataloader, val_dataloader,
                     # writer.add_scalar('Commit loss/Train', avr_com_loss, iter_no)
                     writer.add_scalar('Regularization loss/Train', avr_reg_loss, iter_no)
                     writer.add_scalar('Learning Rate', optimizer.param_groups[0]['lr'], iter_no)
-                    agg_codebook_hist = log_codebook_idx_histogram(model, writer, iter_no, agg_codebook_hist)
+                    if not replace_codebook:
+                        histogram = model.vq.codebook_hist.cpu().numpy()
+                    else:
+                        histogram = model.vq.agg_hist.cpu().numpy()
+                    log_codebook_idx_histogram(histogram, writer, iter_no)
 
 
             wandb.log({"Total loss/Train": avr_tot_loss, 
@@ -235,19 +239,17 @@ def train(model, train_dataloader, val_dataloader,
 
     writer.close()
 
-def log_codebook_idx_histogram(model, writer, iter_no, agg_codebook_hist):
+def log_codebook_idx_histogram(histogram, writer, iter_no):
     fig, ax = plt.subplots()
-    agg_codebook_hist += model.vq.codebook_hist.cpu().numpy()
-    # ax.bar(np.arange(len(model.vq.codebook_hist)), model.vq.codebook_hist.cpu())
-    ax.bar(np.arange(len(agg_codebook_hist)), agg_codebook_hist)
+    codebook_hist = histogram
+    ax.bar(np.arange(len(codebook_hist)), codebook_hist)
     tmp_file = 'histog.png'
     fig.savefig(tmp_file, format='png')
     plt.close(fig)
-    codebook_hist =  np.asarray(Image.open(tmp_file))
-    writer.add_image('Codebook index hist', codebook_hist[:,:,:3], iter_no, dataformats="HWC")
-    wandb.log({'Codebook index hist image': wandb.Image(codebook_hist[:,:,:3])})
-    wandb.log({'Codebook index hist': wandb.Histogram((agg_codebook_hist), num_bins=len(agg_codebook_hist))})
-    return agg_codebook_hist
+    codebook_hist_img =  np.asarray(Image.open(tmp_file))
+    writer.add_image('Codebook index hist', codebook_hist_img[:,:,:3], iter_no, dataformats="HWC")
+    wandb.log({'Codebook index hist image': wandb.Image(codebook_hist_img[:,:,:3])})
+    wandb.log({'Codebook index hist': wandb.Histogram((codebook_hist), num_bins=len(codebook_hist))})
 
 if __name__ == '__main__':
 
