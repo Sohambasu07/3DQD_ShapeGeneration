@@ -89,7 +89,7 @@ class VectorQuantizer(nn.Module):
 
         min_indices = torch.argmin(distances, dim=1)
 
-        hard_quantized_input = self.embedding(min_indices)
+        hard_quantized_input = self.embedding.weight[min_indices]
         random_vector = normal_dist.Normal(0, 1).sample(input_data.shape).to(self.device)
 
         norm_quantization_residual = (input_data - hard_quantized_input).square().sum(dim=1, keepdim=True).sqrt()
