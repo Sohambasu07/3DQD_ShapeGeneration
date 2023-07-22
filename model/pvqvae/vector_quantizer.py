@@ -32,19 +32,19 @@ class VectorQuantizer(nn.Module):
         z_flattened = z.view(-1, self.e_dim)
         # print(z_flattened.shape)
 
-        if self.codebook_dropout and is_training:
-            # generate a random permutation of indices for the tensor
-            indices = torch.randperm(self.n_embed)
+        # if self.codebook_dropout and is_training:
+        #     # generate a random permutation of indices for the tensor
+        #     indices = torch.randperm(self.n_embed)
 
-            # select the first 70% of the indices
-            num_selected = int((1 - self.codebook_dropout_prob) * self.n_embed)
-            indices, _ = torch.sort(indices[:num_selected])
-            indices = indices.to(self.device)
-            embeddings = self.embedding(indices)
+        #     # select the first 70% of the indices
+        #     num_selected = int((1 - self.codebook_dropout_prob) * self.n_embed)
+        #     indices, _ = torch.sort(indices[:num_selected])
+        #     indices = indices.to(self.device)
+        #     embeddings = self.embedding(indices)
 
-        else:
-            # Get all embeddings
-            embeddings = self.embedding.weight
+        # else:
+        #     # Get all embeddings
+        #     embeddings = self.embedding.weight
 
         # # # Calculate dot product similarity between z and embeddings
         # # similarity_old = torch.mm(z_flattened, embeddings.t())
@@ -84,8 +84,8 @@ class VectorQuantizer(nn.Module):
         input_data = z_flattened
 
         distances = (torch.sum(input_data ** 2, dim=1, keepdim=True)
-                         - 2 * (torch.matmul(input_data, embeddings.t()))
-                         + torch.sum(embeddings.t() ** 2, dim=0, keepdim=True))
+                         - 2 * (torch.matmul(input_data, self.embedding.weight.t()))
+                         + torch.sum(self.embedding.weight.t() ** 2, dim=0, keepdim=True))
 
         min_indices = torch.argmin(distances, dim=1)
 
@@ -106,8 +106,8 @@ class VectorQuantizer(nn.Module):
         avg_probs = torch.mean(encodings, dim=0)
         perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + self.eps)))
 
-        if self.codebook_dropout:
-            min_indices = indices[min_indices]
+        # if self.codebook_dropout:
+        #     min_indices = indices[min_indices]
 
         with torch.no_grad():
             self.codebook_hist[min_indices] += 1
