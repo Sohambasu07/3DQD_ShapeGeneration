@@ -25,7 +25,10 @@ class VQVAE(nn.Module):
         # x = torch.reshape(x, (1, 1, *x.shape))
         # patched_tsdf = shape2patch(x)
         encoded = self.encoder(patched_tsdf)
-        z_q, _ = self.vq(encoded, is_training)
+        if is_training:
+            z_q, _ = self.vq(encoded, is_training)
+        else:
+            z_q = self.vq.inference(encoded)
         # vq_loss = torch.tensor(0.0, dtype=torch.float32).to(z_q.device)
         # commitment_loss = torch.tensor(0.0, dtype=torch.float32).to(z_q.device)
 

@@ -40,7 +40,6 @@ def unfold_to_cubes(x, cube_size=8, stride=8):
     x_cubes = rearrange(x_cubes, 'b c p d h w -> (b p) c d h w')
 
     return x_cubes
-
 def fold_to_voxels(x_cubes, batch_size, ncubes_per_dim):
     x = rearrange(x_cubes, '(b p) c d h w -> b p c d h w', b=batch_size) 
     x = rearrange(x, 'b (p1 p2 p3) c d h w -> b c (p1 d) (p2 h) (p3 w)',
@@ -87,7 +86,7 @@ if __name__ == '__main__':
     # test_x = torch.zeros((512, 1, 8, 8, 8))
     # test_x = torch.randn((1, 1, 64, 64, 64))
     #load a saved tsdf file and display to verify
-    file_path = args.dataset_path + '/chair/chair_3.pkl'
+    file_path = args.dataset_path + '/table/table_378.pkl'
 
     with open(file_path, 'rb') as f:
         tsdf_sample = pickle.load(f)
@@ -99,7 +98,7 @@ if __name__ == '__main__':
 
     test_x = torch.unsqueeze(torch.unsqueeze(test_x, dim=0), dim=0)
     test_x = shape2patch(test_x)
-    folded_x = fold_to_voxels(test_x, 1, 8)
+    folded_x = patch2shape(test_x)
 
     display_tsdf(folded_x.squeeze().squeeze().cpu(), mc_level=0.0)
 
