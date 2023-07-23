@@ -1,5 +1,6 @@
 import torch
 import argparse
+import keyboard
 
 from model.pvqvae.vqvae import VQVAE
 from utils import fold_to_voxels, display_tsdf
@@ -37,7 +38,7 @@ if __name__ == '__main__':
 
     model.load_state_dict(torch.load(args.load_model_path))
     print("Model loaded")
-
+    model.eval()
     # Create tsdf without zero crossing to get embedding for empty space. Already patched
     tsdf_empty_space = torch.rand(size=(512, 1, 8, 8, 8), device=device)
 
@@ -47,14 +48,14 @@ if __name__ == '__main__':
     embedding_idx = 0
     display_embedding(model, z_q_empty_space, embedding_idx)
 
-    # while True:
-    #     if keyboard.is_pressed('left'):
-    #         embedding_idx -= 1
-    #         print(f'{embedding_idx=}')
-    #         display_embedding(model, z_q_empty_space, embedding_idx)
-    #
-    #     elif keyboard.is_pressed('right'):
-    #         embedding_idx += 1
-    #         print(f'{embedding_idx=}')
-    #         display_embedding(model, z_q_empty_space, embedding_idx)
+    while True:
+        if keyboard.is_pressed('left'):
+            embedding_idx -= 1
+            print(f'{embedding_idx=}')
+            display_embedding(model, z_q_empty_space, embedding_idx)
+    
+        elif keyboard.is_pressed('right'):
+            embedding_idx += 1
+            print(f'{embedding_idx=}')
+            display_embedding(model, z_q_empty_space, embedding_idx)
 

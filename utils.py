@@ -52,6 +52,11 @@ def display_tsdf(tsdf, mc_level=0.0):
     mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_normals=normals)
     mesh.show()
 
+def get_tsdf_vertices_faces(tsdf, mc_level=0.0):
+    tsdf = tsdf.numpy()
+    vertices, faces, normals, _ = skimage.measure.marching_cubes(tsdf, level=mc_level)
+    return vertices, faces
+
 def log_reconstructed_mesh(original_tsdf, rec_tsdf, tensorboard_writer, model_path, iter_no):
     original_tsdf = original_tsdf.squeeze().squeeze()
     original_tsdf = original_tsdf.cpu().numpy()
