@@ -35,7 +35,7 @@ class ShapeNet(Dataset):
         with open(self.paths[index], 'rb') as f:
             tsdf = pickle.load(f)
 
-        return tsdf['tsdf'], tsdf['model_path']
+        return tsdf['tsdf'], tsdf['model_path'], self.paths[index]
     
     def __len__(self):
         return len(self.paths)

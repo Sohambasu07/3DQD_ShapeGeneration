@@ -161,8 +161,14 @@ class VectorQuantizer(nn.Module):
         min_indices = torch.argmin(distances, dim=1)
         quantized_input = codebooks[min_indices]
 
+        with torch.no_grad():
+            self.codebook_hist[min_indices] += 1
+
         quantized_input = quantized_input.view(z.shape)
 
         return quantized_input
+    
+    def reset_histogram(self):
+        self.codebook_hist[:] = 0.0
 
 
