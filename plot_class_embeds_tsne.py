@@ -50,7 +50,7 @@ def main():
 
     # Collect histogram of each class
     # class_names = ['chair', 'table', 'plane']
-    class_names = ['car', 'plane']
+    class_names = ['chair', 'table', 'bed', 'bench']
     class_histograms = {name: torch.zeros(num_embed) for name in class_names}
     tqdm_dataloader = tqdm(test_loader)
     for batch_idx, tsdf_sample in enumerate(tqdm_dataloader):

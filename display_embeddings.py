@@ -22,7 +22,7 @@ def display_embedding(model, z_q_empty_space, embedding_idx):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Display model embeddings')
-    parser.add_argument('--load_model_path', type=str, default='./final_model.pth', help='Path to the saved model')
+    parser.add_argument('--load_model_path', type=str, default='./best_model.pth', help='Path to the saved model')
     parser.add_argument('--num_embed', type=int, default=128, help='Number of embeddings')
     parser.add_argument('--embed_dim', type=int, default=256, help='Embedding dimension')
 

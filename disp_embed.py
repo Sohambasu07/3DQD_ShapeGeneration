@@ -81,6 +81,7 @@ def main():
     vertices, faces = get_mesh_components(model, z_q_empty_space, embedding_idx)
 
     fig, ax = display_3d_mesh(vertices, faces, embedding_idx)
+    ax.view_init(vertical_axis='y')
 
     # Connect the keyboard event to the update_mesh function
     fig.canvas.mpl_connect('key_press_event', lambda event: update_mesh(event, ax, fig, model, z_q_empty_space))
