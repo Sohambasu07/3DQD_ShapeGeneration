@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 import keyboard
 import torch
 import argparse
@@ -36,7 +35,7 @@ def display_3d_mesh(vertices, faces):
 
     return fig, ax
 
-def update_mesh(event, ax, fig, model, start_z_q, z_q_step_size, num_steps):
+def update_mesh(event, ax, fig, stacked_axs, stacked_fig, model, start_z_q, z_q_step_size, num_steps):
 
     global embedding_idx
     if event.key == 'right':
@@ -56,13 +55,23 @@ def update_mesh(event, ax, fig, model, start_z_q, z_q_step_size, num_steps):
     ax.plot_trisurf(vertices[:, 0], vertices[:, 1], vertices[:, 2], triangles=faces)
     fig.canvas.draw()
 
+    if embedding_idx % 2 == 0:
+        plot_id = embedding_idx // 2
+        # stacked_axs[plot_id].get_figure().canvas.draw()  # Ensure the first figure is drawn (optional)
+        # stacked_axs[plot_id].get_figure().canvas.renderer = stacked_axs[plot_id].get_figure().canvas.get_renderer()  # Set the renderer
+
+        # Copy the content from the first original figure to the left subplot of the new figure
+        stacked_axs[plot_id].plot_trisurf(vertices[:, 0], vertices[:, 1], vertices[:, 2], triangles=faces)
+        stacked_axs[plot_id].set_title(f'{100 * embedding_idx / num_steps}%')
+        stacked_fig.canvas.draw()
+
 
 def main():
     parser = argparse.ArgumentParser(description='Display model embeddings')
     parser.add_argument('--load_model_path', type=str, default='./best_model.pth', help='Path to the saved model')
     parser.add_argument('--num_embed', type=int, default=512, help='Number of embeddings')
     parser.add_argument('--embed_dim', type=int, default=256, help='Embedding dimension')
-    parser.add_argument('--mesh1_path', type=str, default='./dataset/chair/chair_70.pkl', help='path to input mesh')
+    parser.add_argument('--mesh1_path', type=str, default='./dataset/chair/chair_82.pkl', help='path to input mesh')
     parser.add_argument('--mesh2_path', type=str, default='./dataset/table/table_70.pkl', help='path to input mesh')
     parser.add_argument('--num_steps', type=int, default=10, help='number of step for interpolation')
 
@@ -98,8 +107,17 @@ def main():
     fig, ax = display_3d_mesh(vertices, faces)
     ax.view_init(azim=-135, vertical_axis='y')
 
+    stacked_fig, stacked_axs = plt.subplots(1, num_steps // 2 + 1, figsize=(20, 5), subplot_kw={'projection': '3d'})
+    for ax_ in stacked_axs:
+        ax_.set_axis_off()
+        ax_.view_init(azim=-135, vertical_axis='y')
+    stacked_axs[0].plot_trisurf(vertices[:, 0], vertices[:, 1], vertices[:, 2], triangles=faces)
+    stacked_axs[0].set_title(f'0%')
+    stacked_fig.suptitle('Interpolated Embeddings: Mesh1 to Mesh2')
+
+
     # Connect the keyboard event to the update_mesh function
-    fig.canvas.mpl_connect('key_press_event', lambda event: update_mesh(event, ax, fig, model, z_q_tsdf1, z_q_step_size, num_steps))
+    fig.canvas.mpl_connect('key_press_event', lambda event: update_mesh(event, ax, fig, stacked_axs, stacked_fig, model,  z_q_tsdf1, z_q_step_size, num_steps))
 
     # print("Use arrow keys to move the mesh. Press 'q' to quit.")
     while True:
