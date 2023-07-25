@@ -7,7 +7,7 @@ from tsdf_dataset import ShapeNet
 from model.pvqvae.vqvae import VQVAE
 import argparse
 
-from utils import shape2patch, patch2shape, display_tsdf
+from utils import shape2patch, display_tsdf
 
 def evaluate(test_dataloader, model, criterion, device='cuda'):
 
@@ -15,10 +15,7 @@ def evaluate(test_dataloader, model, criterion, device='cuda'):
 
     model.eval()
 
-    test_total_loss_buffer = []
     test_recon_loss_buffer = []
-    test_vq_loss_buffer = []
-    test_com_loss_buffer = []
 
     tqdm_dataloader = tqdm(test_dataloader)
     for batch_idx, tsdf_sample in enumerate(tqdm_dataloader):
@@ -29,10 +26,10 @@ def evaluate(test_dataloader, model, criterion, device='cuda'):
         tsdf = torch.reshape(tsdf, (1, 1, *tsdf.shape))
         patched_tsdf = shape2patch(tsdf)
         with torch.no_grad():
-            reconstructed_data, test_vq_loss, test_com_loss = model(patched_tsdf, is_training=False)
+            reconstructed_data = model(patched_tsdf, is_training=False)
             test_recon_loss = criterion(reconstructed_data, tsdf)
 
-        test_total_loss = test_recon_loss + test_vq_loss + test_com_loss
+        test_total_loss = test_recon_loss
 
         # test_total_loss_buffer.append(test_total_loss.item())
         test_recon_loss_buffer.append(test_recon_loss.item())
@@ -43,15 +40,11 @@ def evaluate(test_dataloader, model, criterion, device='cuda'):
         test_avr_recon_loss = np.mean(test_recon_loss_buffer)
         # test_avr_vq_loss = np.mean(test_vq_loss_buffer)
         # test_avr_com_loss = np.mean(test_com_loss_buffer)
-        
-        # tqdm_dataloader.set_postfix_str("Total Loss: {:.4f}, Recon Loss: {:.4f}, Vq Loss: {:.4f}, Commit Loss"\
-        #                                 .format(test_avr_tot_loss, test_avr_recon_loss, 
-        #                                         test_avr_vq_loss, test_avr_com_loss))
 
         
         tqdm_dataloader.set_postfix_str("Test Recon Loss: {:.4f}".format(test_avr_recon_loss))
         
-        if batch_idx == 2:
+        if batch_idx == np.random.randint(0, len(test_dataloader)-1):
             # rec_data = patch2shape(reconstructed_data)
             # rec_data = rec_data.squeeze().squeeze()
             # print(rec_data.min(), rec_data.max())
