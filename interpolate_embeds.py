@@ -1,10 +1,11 @@
-import keyboard
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import keyboard
 import torch
 import argparse
+import pickle 
 from model.pvqvae.vqvae import VQVAE
-from utils import fold_to_voxels, get_tsdf_vertices_faces
+from utils import fold_to_voxels, get_tsdf_vertices_faces, shape2patch, display_tsdf
 
 
 def get_mesh_components(model, z_q_empty_space, embedding_idx):
@@ -21,34 +22,37 @@ def get_mesh_components(model, z_q_empty_space, embedding_idx):
 
     return get_tsdf_vertices_faces(rec_data, mc_level=(rec_data.max() + rec_data.min()) / 2.0)
 
-def display_3d_mesh(vertices, faces, embed_idx):
+def display_3d_mesh(vertices, faces):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax.plot_trisurf(vertices[:, 0], vertices[:, 1], vertices[:, 2], triangles=faces)
 
     # Hide axes for a better view
     ax.set_axis_off()
-    ax.set_title(f'Embedding Index: {embedding_idx}')
+    ax.set_title(f'Mesh1 to Mesh2: 0%')
 
     plt.ion()  # Turn on interactive mode
     plt.show()
 
     return fig, ax
 
-def update_mesh(event, ax, fig, model, z_q_empty_space):
+def update_mesh(event, ax, fig, model, start_z_q, z_q_step_size, num_steps):
 
     global embedding_idx
     if event.key == 'right':
-        embedding_idx += 1
+        if embedding_idx < num_steps:
+            embedding_idx += 1
     elif event.key == 'left':
-        embedding_idx -= 1
+        if embedding_idx > 0:
+            embedding_idx -= 1
 
     print(embedding_idx)
-    vertices, faces = get_mesh_components(model, z_q_empty_space, embedding_idx)
+    interpolated_z_q = start_z_q + z_q_step_size * embedding_idx
+    vertices, faces = get_mesh_components(model, interpolated_z_q, embedding_idx)
     # Redraw the updated mesh
     ax.clear()
     ax.set_axis_off()
-    ax.set_title(f'Embedding Index: {embedding_idx}')
+    ax.set_title(f'Mesh1 to Mesh2: {100 * embedding_idx / num_steps:.1f}%')
     ax.plot_trisurf(vertices[:, 0], vertices[:, 1], vertices[:, 2], triangles=faces)
     fig.canvas.draw()
 
@@ -58,6 +62,9 @@ def main():
     parser.add_argument('--load_model_path', type=str, default='./best_model.pth', help='Path to the saved model')
     parser.add_argument('--num_embed', type=int, default=512, help='Number of embeddings')
     parser.add_argument('--embed_dim', type=int, default=256, help='Embedding dimension')
+    parser.add_argument('--mesh1_path', type=str, default='./dataset/chair/chair_70.pkl', help='path to input mesh')
+    parser.add_argument('--mesh2_path', type=str, default='./dataset/table/table_70.pkl', help='path to input mesh')
+    parser.add_argument('--num_steps', type=int, default=10, help='number of step for interpolation')
 
     args = parser.parse_args()
 
@@ -73,24 +80,44 @@ def main():
     print("Model loaded")
     model.eval()
     # Create tsdf without zero crossing to get embedding for empty space. Already patched
-    tsdf_empty_space = torch.rand(size=(512, 1, 8, 8, 8), device=device)
+    with open(args.mesh1_path, 'rb') as f:
+        tsdf1 = pickle.load(f)
 
-    encoded_empty_space = model.encoder(tsdf_empty_space)
-    z_q_empty_space = model.vq.inference(encoded_empty_space)
+    with open(args.mesh2_path, 'rb') as f:
+        tsdf2 = pickle.load(f)
 
-    vertices, faces = get_mesh_components(model, z_q_empty_space, embedding_idx)
+    # display_tsdf(torch.from_numpy(tsdf1['tsdf']), 0)
+    z_q_tsdf1 = get_tsdf_vq(device, model, tsdf1)
+    z_q_tsdf2 = get_tsdf_vq(device, model, tsdf2)
 
-    fig, ax = display_3d_mesh(vertices, faces, embedding_idx)
+    num_steps = args.num_steps
+    z_q_step_size = (z_q_tsdf2 - z_q_tsdf1) / num_steps
+
+    vertices, faces = get_mesh_components(model, z_q_tsdf1, embedding_idx)
+
+    fig, ax = display_3d_mesh(vertices, faces)
+    ax.view_init(azim=-135, vertical_axis='y')
 
     # Connect the keyboard event to the update_mesh function
-    fig.canvas.mpl_connect('key_press_event', lambda event: update_mesh(event, ax, fig, model, z_q_empty_space))
+    fig.canvas.mpl_connect('key_press_event', lambda event: update_mesh(event, ax, fig, model, z_q_tsdf1, z_q_step_size, num_steps))
 
     # print("Use arrow keys to move the mesh. Press 'q' to quit.")
     while True:
-        plt.pause(0.1)  # Pause to update the display
+        plt.pause(0.01)  # Pause to update the display
         if keyboard.is_pressed('q'):  # Press 'q' key to quit
             print("Quitting...")
             break
+
+def get_tsdf_vq(device, model, tsdf):
+    tsdf = tsdf['tsdf']
+    tsdf = torch.from_numpy(tsdf)
+    tsdf = tsdf.to(device)
+    input_tsdf = torch.reshape(tsdf, (1, 1, *tsdf.shape))
+    patched_tsdf = shape2patch(input_tsdf)
+
+    encoded_tsd = model.encoder(patched_tsdf)
+    z_q_tsdf = model.vq.inference(encoded_tsd)
+    return z_q_tsdf
 
 embedding_idx = 0
 if __name__ == "__main__":
