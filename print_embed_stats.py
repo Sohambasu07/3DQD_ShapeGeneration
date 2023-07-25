@@ -147,7 +147,7 @@ def main():
 
     # find the common indeces for using a different color
     # common_indeces = set.intersection(*indeces_sets)
-    common_indeces = np.intersect1d(*indeces_sets)
+    common_indeces = reduce(np.intersect1d, indeces_sets)
     common_indeces = np.setdiff1d(common_indeces, empty_space_idx)
     print(f'empty space: {len(empty_space_idx)} embeddings. {empty_space_idx}')
     print(f'Embeddings common bw all classes: {len(common_indeces)} emb. {common_indeces}')
