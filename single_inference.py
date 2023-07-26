@@ -12,7 +12,7 @@ from utils import shape2patch, patch2shape, display_tsdf
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Inference PVQVAE')
-    parser.add_argument('--mesh_path', type=str, default='./dataset/plane/plane_24.pkl', help='path to input mesh')
+    parser.add_argument('--mesh_path', type=str, default='./dataset/table/table_126.pkl', help='path to input mesh')
     parser.add_argument('--model_path', type=str, default='./best_model.pth', help='Path to model')
     parser.add_argument('--num_embed', type=int, default=512, help='Number of embeddings')
     parser.add_argument('--embed_dim', type=int, default=256, help='Embedding dimension')

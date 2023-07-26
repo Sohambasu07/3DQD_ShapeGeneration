@@ -7,13 +7,11 @@ from model.pvqvae.vqvae import VQVAE
 from utils import fold_to_voxels, get_tsdf_vertices_faces, shape2patch, display_tsdf
 
 
-def get_mesh_components(model, z_q_empty_space, embedding_idx):
-    embedding = model.vq.embedding.weight[embedding_idx]
-
+def get_mesh_components(model, z_q_empty_space):
     # z_q = z_q_empty_space.clone()
     z_q = z_q_empty_space
-    middle_idx = z_q_empty_space.shape[0] // 2
-    z_q[middle_idx] = embedding.unsqueeze(1).unsqueeze(2).unsqueeze(3)
+    # middle_idx = z_q_empty_space.shape[0] // 2
+    # z_q[middle_idx] = embedding.unsqueeze(1).unsqueeze(2).unsqueeze(3)
 
     voxel_z_q = fold_to_voxels(x_cubes=z_q, batch_size=1, ncubes_per_dim=8)
     rec_data = model.decoder(voxel_z_q).squeeze().squeeze()
@@ -47,7 +45,7 @@ def update_mesh(event, ax, fig, stacked_axs, stacked_fig, model, start_z_q, z_q_
 
     print(embedding_idx)
     interpolated_z_q = start_z_q + z_q_step_size * embedding_idx
-    vertices, faces = get_mesh_components(model, interpolated_z_q, embedding_idx)
+    vertices, faces = get_mesh_components(model, interpolated_z_q)
     # Redraw the updated mesh
     ax.clear()
     ax.set_axis_off()
@@ -72,7 +70,7 @@ def main():
     parser.add_argument('--num_embed', type=int, default=512, help='Number of embeddings')
     parser.add_argument('--embed_dim', type=int, default=256, help='Embedding dimension')
     parser.add_argument('--mesh1_path', type=str, default='./dataset/chair/chair_82.pkl', help='path to input mesh')
-    parser.add_argument('--mesh2_path', type=str, default='./dataset/table/table_70.pkl', help='path to input mesh')
+    parser.add_argument('--mesh2_path', type=str, default='./dataset/table/table_45.pkl', help='path to input mesh')
     parser.add_argument('--num_steps', type=int, default=10, help='number of step for interpolation')
 
     args = parser.parse_args()
@@ -102,7 +100,7 @@ def main():
     num_steps = args.num_steps
     z_q_step_size = (z_q_tsdf2 - z_q_tsdf1) / num_steps
 
-    vertices, faces = get_mesh_components(model, z_q_tsdf1, embedding_idx)
+    vertices, faces = get_mesh_components(model, z_q_tsdf1)
 
     fig, ax = display_3d_mesh(vertices, faces)
     ax.view_init(azim=-135, vertical_axis='y')
@@ -114,6 +112,7 @@ def main():
     stacked_axs[0].plot_trisurf(vertices[:, 0], vertices[:, 1], vertices[:, 2], triangles=faces)
     stacked_axs[0].set_title(f'0%')
     stacked_fig.suptitle('Interpolated Embeddings: Mesh1 to Mesh2')
+    stacked_fig.tight_layout()
 
 
     # Connect the keyboard event to the update_mesh function

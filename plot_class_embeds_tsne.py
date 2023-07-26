@@ -108,6 +108,7 @@ def main():
     print(f'{common_indeces=}')
 
     # plot the embeddings
+    fig = plt.figure()
     colors = plt.get_cmap('plasma', len(class_names) + 1)
     class_colors = {class_name: colors(i) for i, class_name in enumerate(class_names)}
     class_colors['common'] = colors(len(class_names))
@@ -124,17 +125,19 @@ def main():
         # filter outlier embeddings
         # most_used_embeds = most_used_embeds[most_used_embeds[:, 0] < 0.04]
         plt.scatter(most_used_embeds[:, 0], most_used_embeds[:, 1], marker=markers[class_name],
-                    color=class_colors[class_name], alpha=0.8, label=class_name)
+                    color=class_colors[class_name], alpha=0.6, label=class_name)
 
     # plot the common points with a different color
     common_most_used_embeds = reduced_embeds[list(common_indeces)]
     plt.scatter(common_most_used_embeds[:, 0], common_most_used_embeds[:, 1], marker='o', color=class_colors['common'],
                 alpha=1, label='common')
 
-    plt.xlabel('Principal Component 1')
-    plt.ylabel('Principal Component 2')
+    plt.xlabel('Component 1')
+    plt.ylabel('Component 2')
     plt.title('Most Used Quantizer Embeddings')
     plt.legend()
+    fig.savefig('Most Used Quantizer Embeddings_tsne.png', dpi=500)
+
     plt.show()
 
 
